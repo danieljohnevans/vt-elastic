@@ -86,10 +86,18 @@ def get_document(id):
     else:
         images = None
 
+    if '_source' in document and 'url' in document['_source']:
+        url = document['_source']['url']
+    else:
+        url = None
+    
+    if '_source' in document and 'coverage' in document['_source']:
+        coverage = document['_source']['coverage']
+    else:
+        coverage = None
+
     title = document['_source']['source']
     paragraphs = document['_source']['text'].split('\n')
-    url = document['_source']['url']
-    coverage = document['_source']['coverage']
     place = document['_source']['placeOfPublication']
     date = document['_source']['date']
     return render_template('document.html', title=title, paragraphs=paragraphs, images=images, url=url, coverage=coverage, place=place, date=date)
