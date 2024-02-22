@@ -88,7 +88,11 @@ def get_document(id):
 
     title = document['_source']['source']
     paragraphs = document['_source']['text'].split('\n')
-    return render_template('document.html', title=title, paragraphs=paragraphs, images=images)
+    url = document['_source']['url']
+    coverage = document['_source']['coverage']
+    place = document['_source']['placeOfPublication']
+    date = document['_source']['date']
+    return render_template('document.html', title=title, paragraphs=paragraphs, images=images, url=url, coverage=coverage, place=place, date=date)
 
 @app.cli.command()
 def reindex():

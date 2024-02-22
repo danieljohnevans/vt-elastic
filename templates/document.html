@@ -3,7 +3,12 @@
 {% block content %}
     <div class="row">
         <p><a href="javascript:history.back(1)" class="btn btn-primary">← Back</a></p>
-        <h2 class="text-center">{{ title }}</h2>
+
+        
+        <h2 class="text-center">From <a href="{{ url }}" target="_blank">  {{ title }}  </a></h2>
+
+        <p class="text-center"><b>{{ date }} | <a href="{{ coverage }}" target="_blank"> {{ place }} </a> </b></p>
+         
 
         <div class="col-md-6">
             {% for paragraph in paragraphs %}
