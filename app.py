@@ -62,7 +62,7 @@ def handle_search():
     aggs = {
     'Location': {
         bucket['key']: bucket['doc_count']
-        for bucket in results['aggregations']['category-agg']['buckets']
+        for bucket in sorted(results['aggregations']['category-agg']['buckets'], key=lambda x: x['key'])
     }, 
     'Year': {
         bucket['key_as_string']: bucket['doc_count']
@@ -80,9 +80,15 @@ def handle_search():
 @app.get('/document/<id>')
 def get_document(id):
     document = es.retrieve_document(id)
-    title = document['_source']['name']
-    paragraphs = document['_source']['content'].split('\n')
-    return render_template('document.html', title=title, paragraphs=paragraphs)
+
+    if '_source' in document and 'page_image' in document['_source']:
+        images = document['_source']['page_image']
+    else:
+        images = None
+
+    title = document['_source']['source']
+    paragraphs = document['_source']['text'].split('\n')
+    return render_template('document.html', title=title, paragraphs=paragraphs, images=images)
 
 @app.cli.command()
 def reindex():
