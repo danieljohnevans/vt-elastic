@@ -112,7 +112,7 @@ def reindex():
 def extract_filters(query):
     filters = []
 
-    filter_regex = r'category:([^\s]+)\s*'
+    filter_regex = r'location:([^\s]+)\s*'
     m = re.search(filter_regex, query)
     if m:
         filters.append({
