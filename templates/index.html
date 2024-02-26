@@ -53,8 +53,9 @@
                             <br><b>Cluster:</b> {{ result._source.cluster }}.   
                             <br><b>Date:</b> {{ result._source.date  }}.
                             {% if result._score %}
+                            {% if result._source.open == "true" %}
                             <br><b>Text:</b> {{ result._source.text }}.
-                            <br><i>(<b>Score:</b> {{ result._score }})</i>{% endif %}
+                            <br><i>(<b>Score:</b> {{ result._score }})</i>{% endif %}{% endif %}
                         </small>
                     </p>
                 {% endfor %}
