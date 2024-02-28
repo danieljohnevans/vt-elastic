@@ -41,7 +41,8 @@
                     {% endif %}
                     <div class="col"></div>
                 </div>
-                {% for result in results %}
+                
+                    {% for result in results %}
                     <p>
                         {{ from_ + loop.index }}. <b><a href="{{ url_for('get_document', id=result._id) }}">{{ result._source.source }}</a></b>
                         <!-- <br> -->
@@ -50,7 +51,7 @@
                         {% endif %} -->
                         <!-- <br> -->
                         <small>
-                            <br><b>Cluster:</b> {{ result._source.cluster }}.   
+                            <br><b>Cluster:</b> <a href="{{ url_for('get_cluster', cluster_id=result._source.cluster) }}"> {{ result._source.cluster }}</a>
                             <br><b>Date:</b> {{ result._source.date  }}.
                             {% if result._score %}
                             {% if result._source.open == "true" %}

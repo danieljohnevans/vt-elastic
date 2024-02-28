@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+
+<h2 class="text-center">
+    {% for title in titles %}
+    <p>{{ title }}</p>
+    {% endfor %}
+
+</h2>
+
+{% endblock %}

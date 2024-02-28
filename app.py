@@ -55,7 +55,7 @@ def handle_search():
                 },
             },
     },
-        size=5,
+        size=10,
         from_=from_
     )
 
@@ -102,6 +102,19 @@ def get_document(id):
     date = document['_source']['date']
     open=document['_source']['open']
     return render_template('document.html', title=title, paragraphs=paragraphs, images=images, url=url, coverage=coverage, place=place, date=date, open=open)
+
+@app.get('/cluster/<cluster_id>')
+def get_cluster(cluster_id):
+
+    cluster = es.retrieve_cluster(cluster_id)
+
+    if cluster:
+        titles = [document['source'] for document in cluster]
+
+        return render_template('cluster.html', titles=titles)
+
+    return render_template('cluster.html', titles=[])
+
 
 @app.cli.command()
 def reindex():

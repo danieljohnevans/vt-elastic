@@ -47,3 +47,22 @@ class Search:
     
     def retrieve_document(self, id):
         return self.es.get(index='search', id=id)
+    
+    def retrieve_cluster(self, cluster_value):
+
+        #create query
+        query = {
+            "query": {
+                "match": {
+                    "cluster": cluster_value
+                }
+            }
+        }
+
+        result = self.es.search(index='search', body=query)
+
+        #only returns first item else returns none
+        if result['hits']['total']['value'] > 0:
+            return [hit['_source'] for hit in result['hits']['hits']]
+        else:
+            return None
