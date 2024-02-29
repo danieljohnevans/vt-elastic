@@ -106,10 +106,11 @@ def get_document(id):
 @app.get('/cluster/<cluster_id>')
 def get_cluster(cluster_id):
 
+
     cluster = es.retrieve_cluster(cluster_id)
 
     if cluster:
-        titles = [document['source'] for document in cluster]
+        titles = [document.get('source', '') for document in cluster]
 
         return render_template('cluster.html', titles=titles)
 

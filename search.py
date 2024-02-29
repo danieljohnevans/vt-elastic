@@ -59,7 +59,11 @@ class Search:
             }
         }
 
+        # run query twice. first is to get size of hit_count then again w dynamically updated size
         result = self.es.search(index='search', body=query)
+        hits_count = result['hits']['total']['value']
+        size = hits_count
+        result = self.es.search(index='search', body=query, size=size)
 
         #only returns first item else returns none
         if result['hits']['total']['value'] > 0:
