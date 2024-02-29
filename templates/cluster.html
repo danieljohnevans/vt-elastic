@@ -2,12 +2,49 @@
 
 {% block content %}
 
+    <div class="row">
+        <p><a href="javascript:history.back(1)" class="btn btn-primary">← Back</a></p>
+        {% for index in range(titles|length) %}
+        <h2 class="text-center">From 
+            {% if url[index] %}
+                <a href="{{ url[index] }}" target="_blank">{{ titles[index] }}</a>
+            {% else %}
+                {{ titles[index] }}
+            {% endif %}
+        </h2>
+        <p class="text-center">
 
-<h2 class="text-center">
-    {% for title in titles %}
-    <p>{{ title }}</p>
+            <b>{{ date[index] }} | 
+                {% if coverage[index] %}
+                    <a href="{{ coverage[index] }}" target="_blank">{{ place[index] }}</a>
+                {% else %}
+                    {{ place[index] }}
+                {% endif %}
+            </b>
+        </p>      
+        
+    {% if open[index] == "true" %}
+    <div class="col-md-6">
+        {% for paragraph in paragraphs[index] %}
+            <p>{{ paragraph }}</p>
+        {% endfor %}
+    </div>
+
+            <div class="col-md-6">
+                <img src="{{ images[index] }}" alt="Thumbnail" onerror="this.style.display='none';" class="img-fluid ">
+            </div>
+    {% elif open[index] == "false" %}
+        <div class="col-md-12">
+            <p>This text comes from a proprietary database and is unavailable due to copyright restrictions.</p>
+        </div>
+
+        <div class="col-md-12">
+            {% if url[index] is not none %}
+                <p><a href="{{ url[index] }}" target="_blank">{{ url[index] }}</a></p>
+            {% endif %}
+        </div>
+    {% endif %}
+
     {% endfor %}
-
-</h2>
 
 {% endblock %}

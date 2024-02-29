@@ -110,9 +110,33 @@ def get_cluster(cluster_id):
     cluster = es.retrieve_cluster(cluster_id)
 
     if cluster:
-        titles = [document.get('source', '') for document in cluster]
 
-        return render_template('cluster.html', titles=titles)
+        # if '_source' in document and 'page_image' in document['_source']:
+        #     images = [document.get('page_image', '') for document in cluster]
+        # else:
+        #     images = None
+
+        # if '_source' in document and 'url' in document['_source']:
+        #     url = [document.get('url', '') for document in cluster]
+        # else:
+        #     url = None
+        
+        # if '_source' in document and 'coverage' in document['_source']:
+        #     coverage = [document.get('coverage', '') for document in cluster]
+        # else:
+        #     coverage = None
+
+        images = [document.get('page_image', '') for document in cluster]
+        coverage = [document.get('coverage', '') for document in cluster]
+        url = [document.get('url', '') for document in cluster]
+        titles = [document.get('source', '') for document in cluster]
+        # paragraphs = document['_source']['text'].split('\n')
+        paragraphs = [document.get('text', '').split('\n') for document in cluster]
+        place = [document.get('placeOfPublication', '') for document in cluster]
+        date = [document.get('date', '') for document in cluster]
+        open= [document.get('open', '') for document in cluster]
+
+        return render_template('cluster.html', titles=titles, paragraphs=paragraphs, place=place, date=date, open=open, url=url, coverage=coverage, images=images)
 
     return render_template('cluster.html', titles=[])
 
