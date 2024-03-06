@@ -79,7 +79,9 @@ def handle_search():
 
 @app.get('/document/<id>')
 def get_document(id):
+
     document = es.retrieve_document(id)
+    search_term = request.args.get('search_term', '')
 
     if '_source' in document and 'page_image' in document['_source']:
         images = document['_source']['page_image']
@@ -101,13 +103,15 @@ def get_document(id):
     place = document['_source']['placeOfPublication']
     date = document['_source']['date']
     open=document['_source']['open']
-    return render_template('document.html', title=title, paragraphs=paragraphs, images=images, url=url, coverage=coverage, place=place, date=date, open=open)
+    return render_template('document.html', title=title, paragraphs=paragraphs, images=images, url=url, coverage=coverage, place=place, date=date, open=open, search_term=search_term)
 
 @app.get('/cluster/<cluster_id>')
 def get_cluster(cluster_id):
 
 
     cluster = es.retrieve_cluster(cluster_id)
+    search_term = request.args.get('search_term', '')
+
 
     if cluster:
 
@@ -136,7 +140,7 @@ def get_cluster(cluster_id):
         date = [document.get('date', '') for document in cluster]
         open= [document.get('open', '') for document in cluster]
 
-        return render_template('cluster.html', titles=titles, paragraphs=paragraphs, place=place, date=date, open=open, url=url, coverage=coverage, images=images)
+        return render_template('cluster.html', titles=titles, paragraphs=paragraphs, place=place, date=date, open=open, url=url, coverage=coverage, images=images, search_term=search_term)
 
     return render_template('cluster.html', titles=[])
 

@@ -44,18 +44,18 @@
                 
                     {% for result in results %}
                     <p>
-                        {{ from_ + loop.index }}. <b><a href="{{ url_for('get_document', id=result._id) }}">{{ result._source.source }}</a></b>
+                        {{ from_ + loop.index }}. <b><a href="{{ url_for('get_document', id=result._id, search_term=query) }}">{{ result._source.source }}</a></b>
                         <!-- <br> -->
                         <!-- {% if result._source.page_thumb %}
                                  <img src="{{ result._source.page_thumb }}" alt="Thumbnail">
                         {% endif %} -->
                         <!-- <br> -->
                         <small>
-                            <br><b>Cluster:</b> <a href="{{ url_for('get_cluster', cluster_id=result._source.cluster) }}"> {{ result._source.cluster }}</a>
+                            <br><b>Cluster:</b> <a href="{{ url_for('get_cluster', cluster_id=result._source.cluster, search_term=query) }}"> {{ result._source.cluster }}</a>
                             <br><b>Date:</b> {{ result._source.date  }}.
                             {% if result._score %}
                             {% if result._source.open == "true" %}
-                            <br><b>Text:</b> {{ result._source.text }}.
+                            <br><b>Text:</b> {{ result._source.text | replace(query, "<strong>" + query + "</strong>")|safe }}. 
                             <br><i>(<b>Score:</b> {{ result._score }})</i>{% endif %}{% endif %}
                         </small>
                     </p>

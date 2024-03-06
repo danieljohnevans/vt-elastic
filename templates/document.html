@@ -21,11 +21,11 @@
                 {% endif %}
             </b>
         </p>    
-        
         {% if open == "true" %}
             <div class="col-md-6">
                 {% for paragraph in paragraphs %}
-                    <p>{{ paragraph }}</p>
+                    {% set highlighted_paragraph = paragraph|replace(search_term, '<strong>' + search_term + '</strong>')|safe %}
+                <p>{{ highlighted_paragraph }}</p>
                 {% endfor %}
             </div>
 
