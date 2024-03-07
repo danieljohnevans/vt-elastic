@@ -56,7 +56,15 @@ class Search:
                 "match": {
                     "cluster": cluster_value
                 }
-            }
+            },
+            "sort": [
+                {"_score": {"order": "desc"}},
+                {
+                    "text.keyword": {
+                        "order": "asc"
+                    }
+                }
+            ]
         }
 
         # run query twice. first is to get size of hit_count then again w dynamically updated size

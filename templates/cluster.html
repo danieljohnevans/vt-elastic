@@ -4,6 +4,7 @@
 
     <div class="row">
         <p><a href="javascript:history.back(1)" class="btn btn-primary">← Back</a></p>
+        <p><a href="{{ url_for('get_cluster', cluster_id=cluster_id, download_csv=cluster_id) }}" class="btn btn-primary" method="get">Download CSV</a></p>
         <p>Cluster size: {{ titles|length }}</p>
         {% for index in range(titles|length) %}
         <h2 class="text-center">From 

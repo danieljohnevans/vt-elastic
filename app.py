@@ -1,6 +1,9 @@
 import re
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, Response
 from search import Search
+import csv
+import io
+
 
 app = Flask(__name__)
 es = Search()
@@ -115,21 +118,6 @@ def get_cluster(cluster_id):
 
     if cluster:
 
-        # if '_source' in document and 'page_image' in document['_source']:
-        #     images = [document.get('page_image', '') for document in cluster]
-        # else:
-        #     images = None
-
-        # if '_source' in document and 'url' in document['_source']:
-        #     url = [document.get('url', '') for document in cluster]
-        # else:
-        #     url = None
-        
-        # if '_source' in document and 'coverage' in document['_source']:
-        #     coverage = [document.get('coverage', '') for document in cluster]
-        # else:
-        #     coverage = None
-
         images = [document.get('page_image', '') for document in cluster]
         coverage = [document.get('coverage', '') for document in cluster]
         url = [document.get('url', '') for document in cluster]
@@ -140,9 +128,39 @@ def get_cluster(cluster_id):
         date = [document.get('date', '') for document in cluster]
         open= [document.get('open', '') for document in cluster]
 
-        return render_template('cluster.html', titles=titles, paragraphs=paragraphs, place=place, date=date, open=open, url=url, coverage=coverage, images=images, search_term=search_term)
+        filtered_data = [(title, paragraph, p, d, o, u, c, i)
+                                for title, paragraph, p, d, o, u, c, i in zip(titles, paragraphs, place, date, open, url, coverage, images)
+                                if o.lower() == 'true']
+
+        if request.args.get('download_csv'):
+            csv_filename = f'cluster_{cluster_id}_data.csv'
+            csv_data = filtered_data
+
+            response = Response(
+                csv_generator(csv_data),
+                content_type='text/csv',
+                headers={'Content-Disposition': f'attachment; filename={csv_filename}'}
+            )
+
+            return response
+
+        return render_template('cluster.html', titles=titles, paragraphs=paragraphs, place=place, date=date, open=open, url=url, coverage=coverage, images=images, search_term=search_term, cluster_id=cluster_id)
 
     return render_template('cluster.html', titles=[])
+
+def csv_generator(data):
+    csv_buffer = io.StringIO()
+    csv_writer = csv.writer(csv_buffer)
+
+    # Write CSV header
+    csv_writer.writerow(['Title', 'Paragraphs', 'Place', 'Date', 'Open', 'URL', 'Coverage', 'Images'])
+
+    # Write data rows
+    for row in data:
+        csv_writer.writerow(row)
+
+    csv_buffer.seek(0)
+    yield csv_buffer.read()
 
 
 @app.cli.command()
