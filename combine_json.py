@@ -34,6 +34,6 @@ def refactor_json_content(contents):
     refactored_content = '[' + ''.join(refactored_lines) + ']'
     return refactored_content
 
-input_folder = 'assets/gtr.json'
+input_folder = 'assets/gtr2.json'
 output_file = 'assets/combined_output.json'
 refactor_gzip_files(input_folder, output_file)
