@@ -215,6 +215,18 @@ def extract_filters(query):
             },
         })
         query = re.sub(filter_regex, '', query).strip()
+    
+    filter_regex = r'cluster:([^\s]+)\s*'
+    m = re.search(filter_regex, query)
+    if m:
+        filters.append({
+            'term': {
+                'cluster': {
+                    'value': m.group(1)
+                }
+            },
+        })
+        query = re.sub(filter_regex, '', query).strip()
 
     filter_regex = r'year:([^\s]+)\s*'
     m = re.search(filter_regex, query)
