@@ -48,7 +48,7 @@ def handle_search():
             'must': {
                 'multi_match': {
                     'query': parsed_query,
-                    'fields': ['name', 'summary', 'text'],
+                    'fields': ['source', 'topdiv', 'text'],
                 }
             }
         }
@@ -79,6 +79,11 @@ def handle_search():
                     'format': 'yyyy',
                 },
             },
+        'cluster-agg': {
+                'terms': {
+                    'field': 'cluster',
+                }
+        },
     },
         size=10,
         from_=from_
@@ -93,6 +98,10 @@ def handle_search():
         bucket['key_as_string']: bucket['doc_count']
         for bucket in results['aggregations']['year-agg']['buckets']
         if bucket['doc_count'] > 0
+    },
+    'Cluster': {
+        bucket['key']: bucket['doc_count']
+        for bucket in results['aggregations']['cluster-agg']['buckets']
     },
     }
 
