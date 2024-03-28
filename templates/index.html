@@ -41,16 +41,41 @@
                     {% endif %}
                     <div class="col"></div>
                 </div>
+
+                {% for cluster in clusters %}
+                <h5 class="mt-3">{{ cluster }}</h5>
+                {% for key, count in clusters[cluster].items() %}
+                <a href="{{ url_for('get_cluster', cluster_id=key, search_term=query) }}">
+                    <input type="hidden" name="query" value="{{ agg|lower }}:{{key}} {{ query }}">
+                    <button type="submit" class="btn btn-lg btn-link{% if clusters[cluster]|length == 1 %} disabled{% endif %}">Cluster {{ key }} | Record Count: ({{ count }})</button><br>
+                </a>
+                    {% set cluster_results = results|selectattr('_source.cluster', 'eq', key)|list %}
+                    {% for result in cluster_results %}
+                        {% if loop.first %}
+                            <p><small>
+                                <b>Sample Entry</b> 
+                                
+                                <br><b>Source:</b>{{ result._source.source }}
+                                <br><b>Date:</b> {{ result._source.date  }}.
+                                {% if result._score %}
+                                {% if result._source.open == "true" %}
+                                <br><b>Text:</b> {{ result._source.text | replace(query, "<strong>" + query + "</strong>")|safe }}. 
+                                <br><i>(<b>Score:</b> {{ result._score }})</i>{% endif %}{% endif %}
+                            </small></p>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+            {% endfor %}
                 
-                    {% for result in results %}
+                    <!-- {% for result in results %}
                     <p>
-                        {{ from_ + loop.index }}. <b><a href="{{ url_for('get_document', id=result._id, search_term=query) }}">{{ result._source.source }}</a></b>
+                        {{ from_ + loop.index }}. <b><a href="{{ url_for('get_document', id=result._id, search_term=query) }}">{{ result._source.source }}</a></b> -->
                         <!-- <br> -->
                         <!-- {% if result._source.page_thumb %}
                                  <img src="{{ result._source.page_thumb }}" alt="Thumbnail">
                         {% endif %} -->
                         <!-- <br> -->
-                        <small>
+                        <!-- <small>
                             <br><b>Cluster:</b> <a href="{{ url_for('get_cluster', cluster_id=result._source.cluster, search_term=query) }}"> {{ result._source.cluster }}</a>
                             <br><b>Date:</b> {{ result._source.date  }}.
                             {% if result._score %}
@@ -59,7 +84,7 @@
                             <br><i>(<b>Score:</b> {{ result._score }})</i>{% endif %}{% endif %}
                         </small>
                     </p>
-                {% endfor %}
+                {% endfor %} -->
             </div>
         </div>
     {% elif request.method == 'POST' %}

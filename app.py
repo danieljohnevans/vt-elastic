@@ -85,7 +85,7 @@ def handle_search():
                 }
         },
     },
-        size=10,
+        size=1000,
         from_=from_
     )
 
@@ -105,10 +105,17 @@ def handle_search():
     },
     }
 
+    clusters = {
+        'Cluster': {
+        bucket['key']: bucket['doc_count']
+        for bucket in results['aggregations']['cluster-agg']['buckets']
+        }
+    }
+
     return render_template('index.html', results=results['hits']['hits'],
                            query=query, from_=from_,
                            total=results['hits']['total']['value'],
-                           aggs=aggs)
+                           aggs=aggs, clusters=clusters)
 
 
 @app.get('/document/<id>')
