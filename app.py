@@ -161,14 +161,14 @@ def get_cluster(cluster_id):
         url = [document.get('url', '') for document in cluster]
         titles = [document.get('source', '') for document in cluster]
         # paragraphs = document['_source']['text'].split('\n')
-        paragraphs = [document.get('text', '').split('\n') for document in cluster]
+        paragraphs = [document.get('text', '') for document in cluster]
         place = [document.get('placeOfPublication', '') for document in cluster]
         date = [document.get('date', '') for document in cluster]
         open= [document.get('open', '') for document in cluster]
 
         filtered_data = [(title, paragraph, p, d, o, u, c, i)
-                                for title, paragraph, p, d, o, u, c, i in zip(titles, paragraphs, place, date, open, url, coverage, images)
-                                if o.lower() == 'true']
+                 if o.lower() == 'true' else (title, '', p, d, o, u, c, i)
+                 for title, paragraph, p, d, o, u, c, i in zip(titles, paragraphs, place, date, open, url, coverage, images)]
 
         if request.args.get('download_csv'):
             csv_filename = f'cluster_{cluster_id}_data.csv'
@@ -190,10 +190,8 @@ def csv_generator(data):
     csv_buffer = io.StringIO()
     csv_writer = csv.writer(csv_buffer)
 
-    # Write CSV header
     csv_writer.writerow(['Title', 'Paragraphs', 'Place', 'Date', 'Open', 'URL', 'Coverage', 'Images'])
 
-    # Write data rows
     for row in data:
         csv_writer.writerow(row)
 
