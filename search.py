@@ -90,23 +90,30 @@ class Search:
     def retrieve_document(self, id):
         return self.es.get(index='search', id=id)
     
-    def retrieve_cluster(self, cluster_value):
+    def retrieve_cluster(self, cluster_value, search_term):
+        print(search_term)
 
-        #create query
         query = {
             "query": {
-                "match": {
-                    "cluster": cluster_value
+                "bool": {
+                    "must": [
+                        {"match": {"cluster": cluster_value}}
+                    ],
+                    "should": [
+                        {
+                            "multi_match": {
+                                "query": search_term,
+                                "fields": ["text"]
+                            }
+                        }
+                    ],
+                    "minimum_should_match": 0
                 }
             },
             "sort": [
-                {"_score": {"order": "desc"}},
-                {
-                    "text.keyword": {
-                        "order": "asc"
-                    }
-                }
-            ]
+            {"text.keyword": {"order": "asc"}},
+            "_score"  
+        ]
         }
 
         # run query twice. first is to get size of hit_count then again w dynamically updated size

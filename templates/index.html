@@ -55,8 +55,8 @@
                             <p><small>
                                 <b>Sample Entry</b> 
                                 
-                                <br><b>Source:</b>{{ result._source.source }}
-                                <br><b>Date:</b> {{ result._source.date  }}.
+                                <br><b>Source: </b>{{ result._source.source }}
+                                <br><b>Date: </b> {{ result._source.date  }}.
                                 {% if result._score %}
                                 {% if result._source.open == "true" %}
                                 <br><b>Text:</b> {{ result._source.text | replace(query, "<strong>" + query + "</strong>")|safe }}. 

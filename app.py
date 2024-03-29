@@ -48,7 +48,9 @@ def handle_search():
             'must': {
                 'multi_match': {
                     'query': parsed_query,
-                    'fields': ['source', 'topdiv', 'text'],
+                    'fields': ['text'],
+                    # probably only want to search the text
+                    # 'fields': ['text', 'source', 'topdiv'],
                 }
             }
         }
@@ -85,7 +87,7 @@ def handle_search():
                 }
         },
     },
-        size=1000,
+        size=5000,
         from_=from_
     )
 
@@ -150,8 +152,9 @@ def get_document(id):
 def get_cluster(cluster_id):
 
 
-    cluster = es.retrieve_cluster(cluster_id)
     search_term = request.args.get('search_term', '')
+    cluster = es.retrieve_cluster(cluster_id, search_term)
+
 
 
     if cluster:
@@ -161,14 +164,15 @@ def get_cluster(cluster_id):
         url = [document.get('url', '') for document in cluster]
         titles = [document.get('source', '') for document in cluster]
         # paragraphs = document['_source']['text'].split('\n')
-        paragraphs = [document.get('text', '') for document in cluster]
+        paragraphs = [document.get('text', '').split('\n') for document in cluster]
+        csv_paragraphs = [document.get('text', '') for document in cluster]
         place = [document.get('placeOfPublication', '') for document in cluster]
         date = [document.get('date', '') for document in cluster]
         open= [document.get('open', '') for document in cluster]
 
-        filtered_data = [(title, paragraph, p, d, o, u, c, i)
+        filtered_data = [(title, csv_paragraphs, p, d, o, u, c, i)
                  if o.lower() == 'true' else (title, '', p, d, o, u, c, i)
-                 for title, paragraph, p, d, o, u, c, i in zip(titles, paragraphs, place, date, open, url, coverage, images)]
+                 for title, csv_paragraphs, p, d, o, u, c, i in zip(titles, csv_paragraphs, place, date, open, url, coverage, images)]
 
         if request.args.get('download_csv'):
             csv_filename = f'cluster_{cluster_id}_data.csv'
