@@ -44,16 +44,25 @@ def handle_search():
     from_ = request.form.get('from_', type=int, default=0)
 
     if parsed_query:
-        search_query = {
-            'must': {
-                'multi_match': {
-                    'query': parsed_query,
-                    'fields': ['text'],
-                    # probably only want to search the text
-                    # 'fields': ['text', 'source', 'topdiv'],
+        if '"' in parsed_query:
+            search_query = {
+                'must': {
+                    'match_phrase': {
+                        'text': parsed_query.strip('"'),
+                    }
                 }
             }
-        }
+        else:
+            search_query = {
+                'must': {
+                    'multi_match': {
+                        'query': parsed_query,
+                        'fields': ['text'],
+                        # probably only want to search the text
+                        # 'fields': ['text', 'source', 'topdiv'],
+                    }
+                }
+            }
     else:
         search_query = {
             'must': {
@@ -224,6 +233,7 @@ def extract_filters(query):
             },
         })
         query = re.sub(filter_regex, '', query).strip()
+        
     
     # filter_regex = r'cluster:([^\s]+)\s*'
     # m = re.search(filter_regex, query)
