@@ -50,18 +50,15 @@
                     <button type="submit" class="btn btn-lg btn-link{% if clusters[cluster]|length == 1 %} disabled{% endif %}">Cluster {{ key }} | Record Count: ({{ count }})</button><br>
                 </a>
                     {% set cluster_results = results|selectattr('_source.cluster', 'eq', key)|list %}
-                    {% for result in cluster_results %}
+                    {% set open_cluster_results = cluster_results|selectattr('_source.open', 'eq', 'true') %}
+                    {% for result in open_cluster_results %}
                         {% if loop.first %}
-                            <p><small>
-                                <b>Sample Entry</b> 
+                            <p>
                                 
                                 <br><b>Source: </b>{{ result._source.source }}
                                 <br><b>Date: </b> {{ result._source.date  }}.
-                                {% if result._score %}
-                                {% if result._source.open == "true" %}
-                                <br><b>Text:</b> {{ result._source.text | replace(query, "<strong>" + query + "</strong>")|safe }}. 
-                                <br><i>(<b>Score:</b> {{ result._score }})</i>{% endif %}{% endif %}
-                            </small></p>
+                                <br><b>Text:</b> {{ result._source.text | replace(query, "<strong>" + query + "</strong>")|safe }}. <br>
+                            </p>
                         {% endif %}
                     {% endfor %}
                 {% endfor %}
