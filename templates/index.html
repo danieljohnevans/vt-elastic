@@ -42,12 +42,14 @@
                     <div class="col"></div>
                 </div>
 
-                {% for cluster in clusters %}
+                {% for cluster_name, cluster_data in clusters.items() %}
                 <h5 class="mt-3">{{ cluster }}</h5>
-                {% for key, count in clusters[cluster].items() %}
-                <a href="{{ url_for('get_cluster', cluster_id=key, search_term=query) }}">
+                {% for key, data in cluster_data.items() %}
+                {% set doc_count = data['doc_count'] %}
+                {% set first_year = data['first_year'] %}
+                {% set last_year = data['last_year'] %}                <a href="{{ url_for('get_cluster', cluster_id=key, search_term=query) }}">
                     <input type="hidden" name="query" value="{{ agg|lower }}:{{key}} {{ query }}">
-                    <button type="submit" class="btn btn-lg btn-link{% if clusters[cluster]|length == 1 %} disabled{% endif %}">Cluster {{ key }} | Record Count: ({{ count }})</button><br>
+                    <button type="submit" class="btn btn-lg btn-link{% if clusters[cluster]|length == 1 %} disabled{% endif %}"> {{ doc_count }} reprints from {{ first_year }} to {{ last_year }}</button><br>
                 </a>
                     {% set cluster_results = results|selectattr('_source.cluster', 'eq', key)|list %}
                     {% set open_cluster_results = cluster_results|selectattr('_source.open', 'eq', 'true') %}

@@ -95,25 +95,10 @@ class Search:
 
         query = {
             "query": {
-                "bool": {
-                    "must": [
-                        {"match": {"cluster": cluster_value}}
-                    ],
-                    "should": [
-                        {
-                            "multi_match": {
-                                "query": search_term,
-                                "fields": ["text"]
-                            }
-                        }
-                    ],
-                    "minimum_should_match": 0
+                "match": {
+                    "cluster": cluster_value
                 }
-            },
-            "sort": [
-            {"text.keyword": {"order": "asc"}},
-            "_score"  
-        ]
+            }
         }
 
         # run query twice. first is to get size of hit_count then again w dynamically updated size

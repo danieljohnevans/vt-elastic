@@ -116,10 +116,25 @@ def handle_search():
     # },
     }
 
+    buckets = results['aggregations']['year-agg']['buckets']
+
+    years_data = {bucket['key_as_string']: bucket['doc_count'] for bucket in buckets}
+
+    years = [int(year) for year in years_data.keys()]
+
+    first_year = min(years) if years else None
+    last_year = max(years) if years else None
+    clusters_data = results['aggregations']['cluster-agg']['buckets']
+
+
     clusters = {
         'Cluster': {
-        bucket['key']: bucket['doc_count']
-        for bucket in results['aggregations']['cluster-agg']['buckets']
+            bucket['key']: {
+                'doc_count': bucket['doc_count'],
+                'first_year': first_year,
+                'last_year': last_year
+            }
+            for bucket in clusters_data
         }
     }
 
