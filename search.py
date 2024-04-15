@@ -91,7 +91,6 @@ class Search:
         return self.es.get(index='search', id=id)
     
     def retrieve_cluster(self, cluster_value, search_term):
-        print(search_term)
 
         query = {
             "query": {

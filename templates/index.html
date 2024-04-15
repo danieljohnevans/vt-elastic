@@ -46,10 +46,11 @@
                 <h5 class="mt-3">{{ cluster }}</h5>
                 {% for key, data in cluster_data.items() %}
                 {% set doc_count = data['doc_count'] %}
-                {% set first_year = data['first_year'] %}
-                {% set last_year = data['last_year'] %}                <a href="{{ url_for('get_cluster', cluster_id=key, search_term=query) }}">
+                {% set min_date = data['min_date'] %}
+                {% set max_date = data['max_date'] %}                
+                <a href="{{ url_for('get_cluster', cluster_id=key, search_term=query) }}">
                     <input type="hidden" name="query" value="{{ agg|lower }}:{{key}} {{ query }}">
-                    <button type="submit" class="btn btn-lg btn-link{% if clusters[cluster]|length == 1 %} disabled{% endif %}"> {{ doc_count }} reprints from {{ first_year }} to {{ last_year }}</button><br>
+                    <button type="submit" class="btn btn-lg btn-link{% if clusters[cluster]|length == 1 %} disabled{% endif %}"> {{ doc_count }} reprints from {{ min_date }} to {{ max_date }}</button><br>
                 </a>
                     {% set cluster_results = results|selectattr('_source.cluster', 'eq', key)|list %}
                     {% set open_cluster_results = cluster_results|selectattr('_source.open', 'eq', 'true') %}

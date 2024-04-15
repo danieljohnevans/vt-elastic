@@ -116,33 +116,46 @@ def handle_search():
     # },
     }
 
-    buckets = results['aggregations']['year-agg']['buckets']
 
-    years_data = {bucket['key_as_string']: bucket['doc_count'] for bucket in buckets}
+    
 
-    years = [int(year) for year in years_data.keys()]
 
-    first_year = min(years) if years else None
-    last_year = max(years) if years else None
     clusters_data = results['aggregations']['cluster-agg']['buckets']
 
 
     clusters = {
         'Cluster': {
             bucket['key']: {
-                'doc_count': bucket['doc_count'],
-                'first_year': first_year,
-                'last_year': last_year
+                'doc_count': bucket['doc_count']
             }
             for bucket in clusters_data
         }
     }
 
-    return render_template('index.html', results=results['hits']['hits'],
-                           query=query, from_=from_,
-                           total=results['hits']['total']['value'],
-                           aggs=aggs, clusters=clusters)
 
+    #this might slow everything down bc needs to execute search multiple times
+    for key in clusters['Cluster']:
+        cluster_data = clusters['Cluster'][key]
+        cluster_id = key
+        
+        clustr = es.retrieve_cluster(cluster_id, query)
+        date = [document.get('date', '') for document in clustr]
+        
+        if date:
+            cluster_data['min_date'] = min(date)
+            cluster_data['max_date'] = max(date)
+        else:
+            cluster_data['min_date'] = None
+            cluster_data['max_date'] = None
+
+
+    return render_template('index.html', 
+                        results=results['hits']['hits'],
+                        query=query,
+                        from_=from_,
+                        total=results['hits']['total']['value'],
+                        aggs=aggs,
+                        clusters=clusters)
 
 @app.get('/document/<id>')
 def get_document(id):
