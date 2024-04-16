@@ -56,8 +56,7 @@
                       </div>
                     </div>
                     </div>
-                    
-
+                    <hr>
                     <div id="{{ cluster_name.replace(' ', '_') }}_clusters">
                         {% for key, data in cluster_data.items() %}
                             {% set doc_count = data['doc_count'] %}
@@ -73,12 +72,13 @@
                                 {% for result in open_cluster_results %}
                                     {% if loop.first %}
                                         <p>
-                                            <br><b>Source:</b> {{ result._source.source }}
+                                            <b>Source:</b> {{ result._source.source }}
                                             <br><b>Date:</b> {{ result._source.date }}
                                             <br><b>Text:</b> {{ result._source.text | replace(query, "<strong>" + query + "</strong>")|safe }}.
                                         </p>
                                     {% endif %}
                                 {% endfor %}
+                                <hr>
                             </div>
                         {% endfor %}
                     </div>
