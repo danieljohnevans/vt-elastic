@@ -63,8 +63,8 @@
                             {% set min_date = data['min_date'] %}
                             {% set max_date = data['max_date'] %}
                             <div data-min_date="{{ min_date }}" data-max_date="{{ max_date }}">
-                                <a href="{{ url_for('get_cluster', cluster_id=key, search_term=query) }}">
-                                    <button class="btn btn-lg btn-link">{{ doc_count }} reprints from {{ min_date }} to {{ max_date }}</button>
+                            <a href="{{ url_for('get_cluster', cluster_id=key, search_term=query) }}">
+                                    <h5>{{ doc_count }} reprints from {{ min_date }} to {{ max_date }}</h5>
                                 </a>
 
                                 {% set cluster_results = results|selectattr('_source.cluster', 'eq', key)|list %}
