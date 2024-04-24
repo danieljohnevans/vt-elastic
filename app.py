@@ -62,7 +62,7 @@ def handle_search():
                         # 'fields': ['text', 'source', 'topdiv'],
                     }
                 }
-            }
+    }
     else:
         search_query = {
             'must': {
@@ -74,8 +74,8 @@ def handle_search():
         query={
             'bool': {
                 **search_query,
-                **filters
-            }
+                **filters,
+            },          
         },
         aggs={
         'category-agg': {
@@ -97,7 +97,13 @@ def handle_search():
         },
     },
         size=5000,
-        from_=from_
+        from_=from_,
+        highlight={
+        'fields': {
+            'text': { "pre_tags" : ["<b>"], "post_tags" : ["</b>"],
+                      'fragment_size': 250}
+        }
+        }
     )
 
     aggs = {

@@ -97,10 +97,17 @@ class Search:
                 "match": {
                     "cluster": cluster_value
                 }
+            },
+            "highlight": {
+                "fields": {
+                    'text': { "pre_tags" : ["<b>"], "post_tags" : ["</b>"]}
+                }
             }
         }
+        
 
         # run query twice. first is to get size of hit_count then again w dynamically updated size
+        
         result = self.es.search(index='search', body=query)
         hits_count = result['hits']['total']['value']
         size = hits_count

@@ -37,8 +37,9 @@
     {% if open[index] == "true" %}
     <div class="col-md-6">
         {% for paragraph in paragraphs[index] %}
-            {% set highlighted_paragraph =paragraph |replace(search_term, '<strong>' + search_term + '</strong>')|safe %}
+            {% set highlighted_paragraph = paragraph |replace(search_term, '<b>' + search_term + '</b>')|safe %}
             <p>{{ highlighted_paragraph }}</p>
+
         {% endfor %}
     </div>
 
@@ -47,7 +48,7 @@
             </div>
     {% elif open[index] == "false" %}
         <div class="col-md-12">
-            <p>This text comes from a proprietary database and is unavailable due to copyright restrictions.</p>
+            <p>This text comes from a proprietary database and cannot be displayed due to copyright restrictions.</p>
         </div>
 
         <div class="col-md-12">
