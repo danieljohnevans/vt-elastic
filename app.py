@@ -154,7 +154,7 @@ def handle_search():
             cluster_data['min_date'] = None
             cluster_data['max_date'] = None
 
-
+    print(aggs)
     return render_template('index.html', 
                         results=results['hits']['hits'],
                         query=query,
@@ -256,7 +256,7 @@ def reindex():
 def extract_filters(query):
     filters = []
 
-    filter_regex = r'location:([^\s]+)\s*'
+    filter_regex = r"location:'([^']+)'"
     m = re.search(filter_regex, query)
     if m:
         filters.append({
