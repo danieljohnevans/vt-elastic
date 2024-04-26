@@ -1,6 +1,5 @@
 import gzip
 import os
-import json
 
 def refactor_gzip_files(input_folder, output_file):
     files = [f for f in os.listdir(input_folder) if f.endswith('.gz')]

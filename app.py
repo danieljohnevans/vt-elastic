@@ -154,7 +154,6 @@ def handle_search():
             cluster_data['min_date'] = None
             cluster_data['max_date'] = None
 
-    print(aggs)
     return render_template('index.html', 
                         results=results['hits']['hits'],
                         query=query,
@@ -295,3 +294,7 @@ def extract_filters(query):
         query = re.sub(filter_regex, '', query).strip()
 
     return {'filter': filters}, query
+
+@app.route('/about')
+def about():
+    return render_template('about.html')
