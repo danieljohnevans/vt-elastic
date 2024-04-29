@@ -1,13 +1,20 @@
 import re
-from flask import Flask, render_template, request, Response
+from flask import Flask, render_template, request, Response, redirect, url_for
 from search import Search
 import csv
 import io
+from jinja2 import Undefined
+
 
 
 app = Flask(__name__)
 es = Search()
 
+class CustomUndefined(Undefined):
+    def _fail_with_undefined_error(self, *args, **kwargs):
+        return redirect(url_for('index'))
+
+app.jinja_env.undefined = CustomUndefined
 
 
 @app.get('/')
@@ -69,6 +76,7 @@ def handle_search():
                 'match_all': {}
             }
         }
+
 
     results = es.search(
         query={
@@ -197,7 +205,8 @@ def get_cluster(cluster_id):
     search_term = request.args.get('search_term', '')
     cluster = es.retrieve_cluster(cluster_id, search_term)
 
-
+    if search_term.startswith('"') and search_term.endswith('"'):
+        search_term = search_term[1:-1]
 
     if cluster:
 

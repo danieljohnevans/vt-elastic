@@ -4,6 +4,7 @@
     <form method="POST" action="{{ url_for('handle_search') }}">
       <div class="mb-3">
           <input type="text" class="form-control" name="query" id="query" placeholder="Enter your search query" value="{{ query }}" autofocus>
+          
       </div>
     </form>
     {% if results %}
