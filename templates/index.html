@@ -65,7 +65,7 @@
                       </div>
                     </div>
                     </div>
-                    <hr>
+                    <hr style="border-width: 2px;">
                     <div id="{{ cluster_name.replace(' ', '_') }}_clusters">
                         {% for key, data in cluster_data.items() %}
                             {% set doc_count = data['doc_count'] %}
@@ -75,7 +75,6 @@
                             <a href="{{ url_for('get_cluster', cluster_id=key, search_term=query) }}">
                                     <h5>{{ doc_count }} reprints from {{ min_date }} to {{ max_date }}</h5>
                                 </a>
-
                                 {% set cluster_results = results|selectattr('_source.cluster', 'eq', key)|list %}
                                 {% set open_cluster_results = cluster_results|selectattr('_source.open', 'eq', 'true') %}
                                 {% for result in open_cluster_results %}
@@ -89,7 +88,7 @@
                                     {% else %}
                                     <p>This textual comes from a proprietary database and cannot be displayed due to copyright restrictions.</p>
                                 {% endfor %}
-                                <hr>
+                                <hr >
                             </div>
                         {% endfor %}
                     </div>
