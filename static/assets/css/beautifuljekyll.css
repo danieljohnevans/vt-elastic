@@ -75,11 +75,23 @@ h1, h2, h3, h4 {
 a,.btn.btn-link.btn-sm {
   color: #9FC4EC;
 }
+
+.btn-primary {
+  background-color: #9FC4EC;
+  border-color: #9FC4EC;
+}
+
+.btn-primary:hover {
+  background-color: #337ab7;
+}
+
 a:hover,
 a:focus,
-.btn.btn-link.btn-sm:hover {
+.btn.btn-link.btn-sm:hover
+ {
   color: #337ab7;
 }
+
 
 blockquote {
   color: var(--mid-col);
@@ -126,12 +138,12 @@ hr {
   text-shadow: none;
 }
 ::selection {
-  color: var(--page-col);
-  background-color: var(--hover-col);
+  color: #FFFFFF;
+  background-color: #0085A1;
   text-shadow: none;
 }
 img::selection {
-  color: var(--hover-col);
+  color: #0085A1;
   background: transparent;
 }
 img::-moz-selection {
