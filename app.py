@@ -309,12 +309,7 @@ def extract_filters(query):
 
 @app.route('/about')
 def about():
-    iiif_viewer_data = {
-        "id": "https://damsssl.llgc.org.uk/iiif/2.0/4389767/canvas/4389772.json",
-        "type": "Canvas",
-        "partOf": [{"id": "https://damsssl.llgc.org.uk/iiif/2.0/4389767/manifest.json", "type": "Manifest"}]
-    }
-    return render_template('about.html', iiif_viewer_data=iiif_viewer_data)
+    return render_template('about.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
