@@ -60,6 +60,7 @@ const miradorInstance = Mirador.viewer({
       manifestId:
         "https://www.loc.gov/item/sn84020071/1838-08-02/ed-1/manifest.json",
         "canvasIndex": 2,
+        view: 'single',
 
     },
   ]
@@ -69,12 +70,23 @@ console.log(miradorInstance);
 
 const windowId = Object.keys(miradorInstance.store.getState().windows)[0];
 
+const percentages_boxToZoom = {
+  x: 41.319597,
+  y: 61.540608,
+  width: 16.905962,
+  height: 8.990371
+};
+
+const canvasDimensions = {
+  width: 4562,
+  height: 7166
+};
 
 const boxToZoom = {
-  x: 6340,
-  y: 4331,
-  width: 900,
-  height: 995
+  x: (percentages_boxToZoom.x / 100) * canvasDimensions.width,
+  y: (percentages_boxToZoom.y / 100) * canvasDimensions.height,
+  width: (percentages_boxToZoom.width / 100) * canvasDimensions.width,
+  height: (percentages_boxToZoom.height / 100) * canvasDimensions.height
 };
 
 const zoomCenter = {
@@ -88,7 +100,7 @@ var action = Mirador.actions.updateViewport(windowId, {
   zoom: 1 / boxToZoom.width
 });
 
-
+// fix timeout 
 setTimeout(() => {
   miradorInstance.store.dispatch(action);
 }, 2000);
