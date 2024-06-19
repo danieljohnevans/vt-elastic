@@ -154,10 +154,13 @@ def handle_search():
         
         clustr = es.retrieve_cluster(cluster_id, query)
         date = [document.get('date', '') for document in clustr]
+        placeOfPublication = [document.get('placeOfPublication', '') for document in clustr]
         
         if date:
             cluster_data['min_date'] = min(date)
             cluster_data['max_date'] = max(date)
+        # if placeOfPublication:
+        #     cluster_data['placeOfPublication'] = placeOfPublication
         else:
             cluster_data['min_date'] = None
             cluster_data['max_date'] = None
@@ -306,4 +309,12 @@ def extract_filters(query):
 
 @app.route('/about')
 def about():
-    return render_template('about.html')
+    iiif_viewer_data = {
+        "id": "https://damsssl.llgc.org.uk/iiif/2.0/4389767/canvas/4389772.json",
+        "type": "Canvas",
+        "partOf": [{"id": "https://damsssl.llgc.org.uk/iiif/2.0/4389767/manifest.json", "type": "Manifest"}]
+    }
+    return render_template('about.html', iiif_viewer_data=iiif_viewer_data)
+
+if __name__ == '__main__':
+    app.run(debug=True)
