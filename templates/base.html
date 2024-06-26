@@ -63,7 +63,12 @@ const miradorInstance = Mirador.viewer({
         view: 'single',
 
     },
-  ]
+  ],
+      window: {
+        defaultView: 'single',
+        highlightAllAnnotations: true,
+        forceDrawAnnotations: true,
+      }
 });
 
 console.log(miradorInstance);
