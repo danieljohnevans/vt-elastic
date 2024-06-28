@@ -148,11 +148,15 @@ def handle_search():
 
 
     #this might slow everything down bc needs to execute search multiple times
+    cluster_totals = {}
+
     for key in clusters['Cluster']:
         cluster_data = clusters['Cluster'][key]
         cluster_id = key
+
         
         clustr = es.retrieve_cluster(cluster_id, query)
+        # cluster_total = es.retrieve_cluster(cluster_id)
         date = [document.get('date', '') for document in clustr]
         placeOfPublication = [document.get('placeOfPublication', '') for document in clustr]
         
@@ -165,13 +169,17 @@ def handle_search():
             cluster_data['min_date'] = None
             cluster_data['max_date'] = None
 
+        cluster_totals[cluster_id] = len(date)
+
+
     return render_template('index.html', 
                         results=results['hits']['hits'],
                         query=query,
                         from_=from_,
                         total=results['hits']['total']['value'],
                         aggs=aggs,
-                        clusters=clusters)
+                        clusters=clusters,
+                        cluster_totals=cluster_totals)
 
 @app.get('/document/<id>')
 def get_document(id):

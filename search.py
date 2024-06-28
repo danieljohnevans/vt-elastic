@@ -12,9 +12,9 @@ load_dotenv()
 class Search:
     def __init__(self):
         self.model = SentenceTransformer('all-MiniLM-L6-v2')
-        self.es = Elasticsearch('http://elastic-vt:9200')
+        # self.es = Elasticsearch('http://elastic-vt:9200') # < --- use for local docker 
 
-        # self.es = Elasticsearch('http://localhost:9200')  # <-- connection options need to be added here
+        self.es = Elasticsearch('http://localhost:9200')  # <-- connection options need to be added here
         client_info = self.es.info()
         print('Connected to Elasticsearch!')
         pprint(client_info.body)
