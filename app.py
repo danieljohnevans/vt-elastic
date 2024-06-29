@@ -231,6 +231,9 @@ def get_cluster(cluster_id):
         place = [document.get('placeOfPublication', '') for document in cluster]
         date = [document.get('date', '') for document in cluster]
         open= [document.get('open', '') for document in cluster]
+        corpus = [document.get('corpus', '') for document in cluster]
+
+
 
         filtered_data = [(title, csv_paragraphs, p, d, o, u, c, i)
                  if o.lower() == 'true' else (title, '', p, d, o, u, c, i)
