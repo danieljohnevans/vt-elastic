@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: viraltexts-stage
+  labels:
+    name: viraltexts-stage
+spec:
+  storageClassName: nfs-taiga-manual
+  accessModes:
+    - ReadWriteMany
+  capacity:
+    storage: 10Gi
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /taiga/ncsa/radiant/bbfa/bengal1
+    server: taiga-nfs.ncsa.illinois.edu
+    readOnly: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: viraltexts-stage
+  namespace: viral-texts
+spec:
+  storageClassName: nfs-taiga-manual
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  selector:
+    matchLabels:
+      name: viraltexts-stage
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox-pod
+spec:
+  containers:
+  - name: busybox-container
+    image: python:3.10
+    command: ["sleep", "50000"]
+    volumeMounts:
+    - name: nfs-volume
+      mountPath: /data
+  volumes:
+  - name: nfs-volume
+    persistentVolumeClaim:
+      claimName: viraltexts-stage
