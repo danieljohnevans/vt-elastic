@@ -104,7 +104,7 @@ def handle_search():
                 }
         },
     },
-        size=5000,
+        size=10,
         from_=from_,
         highlight={
         'fields': {
@@ -268,12 +268,12 @@ def csv_generator(data):
     yield csv_buffer.read()
 
 
-@app.cli.command()
-def reindex():
-    """Regenerate the Elasticsearch index."""
-    response = es.reindex()
-    print(f'Index with {len(response["items"])} documents created '
-          f'in {response["took"]} milliseconds.')
+# @app.cli.command()
+# def reindex():
+#     """Regenerate the Elasticsearch index."""
+#     response = es.reindex()
+#     print(f'Index with {len(response["items"])} documents created '
+#           f'in {response["took"]} milliseconds.')
     
 def extract_filters(query):
     filters = []
