@@ -27,7 +27,7 @@ def gendata(filename:str):
             doc = json.loads(l)
             doc['source_file'] = filename
             yield {
-                "_index": "viral-texts-test",
+                "_index": "search",
                 "_source": doc
             }
 

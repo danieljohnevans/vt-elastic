@@ -68,7 +68,6 @@
                     <hr style="border-width: 2px;">
                     <div id="{{ cluster_name.replace(' ', '_') }}_clusters">
                         {% for key, data in cluster_data.items() %}
-    <!-- <p>Total items: {{ cluster_totals }}</p> -->
                             {% set doc_count = data['doc_count'] %}
                             {% set min_date = data['min_date'] %}
                             {% set max_date = data['max_date'] %}
@@ -76,29 +75,19 @@
                             <a href="{{ url_for('get_cluster', cluster_id=key, search_term=query) }}">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h5 class="mb-0">{{ cluster_totals[key] }} reprints from {{ min_date }} to {{ max_date }}</h5>                             </a>
-                                    <!-- <p>{{key}}</p> -->
                                     <p class="mb-0"><b>Matching Witnesses:</b> {{ doc_count }}</p>
-                                </div>                                
-                                {% set cluster_results = results|selectattr('_source.cluster', 'eq', key)|list %}
-                                {% set open_cluster_results = cluster_results|selectattr('_source.open', 'eq', 'true') %}
-                                {% for result in open_cluster_results %}
-                                    {% if loop.first %}
-                                        <p style="margin-top: 0rem;">
-                                            <b>Source:</b> {{ result._source.source }}
-                                            <br><b>Date:</b> {{ result._source.date }}
-                                            <br><b>Text:</b> {{ result.highlight.text[0] | safe }}.
-                                        </p>
-                                    {% endif %}
-                                    {% else %}
-                                    <p>All witnesses in this cluster come from a proprietary database and cannot be displayed.</p>
-                                {% endfor %}
+                             </div> 
+                             {% if first_occurrence and key in first_occurrence %}
+                             <p style="margin-top: 0rem;">
+                                 <b>Source:</b> {{ first_occurrence[key]['source'] }}
+                                 <br><b>Date:</b> {{ first_occurrence[key]['date'] }}
+                                 <br><b>Text:</b> {{ first_occurrence[key]['text'] | safe }}
+                             </p>
+                         {% else %}
+                         <p>All witnesses in this cluster come from a proprietary database and cannot be displayed.</p>                         
+                         {% endif %}          
                                 <hr >
 
-                                <!-- <ul>
-                                    {% for result in results %}
-                                        <li>{{ result._source.cluster }}</li>
-                                    {% endfor %}
-                                </ul> -->
                             </div>
                         {% endfor %}
                     </div>

@@ -4,6 +4,8 @@ from search import Search
 import csv
 import io
 from jinja2 import Undefined
+from pprint import pprint
+
 
 
 
@@ -44,6 +46,27 @@ def index():
 #                            total=results['hits']['total']['value'])
 
 
+def retrieve_cluster_with_highlight(cluster_id, search_term):
+    query = {
+        "query": {
+            "match": {
+                "cluster": cluster_id
+            }
+        },
+        "highlight": {
+            "fields": {
+                'text': {
+                    "pre_tags": ["<b>"],
+                    "post_tags": ["</b>"],
+                    "fragment_size": 250
+                }
+            }
+        }
+    }
+
+    result = es.retrieve_cluster(cluster_id, search_term)
+    return result
+
 @app.post('/')
 def handle_search():
     query = request.form.get('query', '')
@@ -71,10 +94,21 @@ def handle_search():
     else:
         search_query = {
             'must': {
-                'match_all': {}
+                'match_phrase': {}
             }
         }
 
+    
+    #use the to update size, resizing not currently working correctly
+        # result = es.search(query={
+        #     'bool': {
+        #         **search_query,
+        #         **filters,
+        #     },          
+        # })
+    # hits_count = result['hits']['total']['value']
+    # size = hit_counts
+    # print(hits_count)
 
     results = es.search(
         query={
@@ -129,9 +163,6 @@ def handle_search():
     }
 
 
-    
-
-
     clusters_data = results['aggregations']['cluster-agg']['buckets']
 
 
@@ -141,22 +172,31 @@ def handle_search():
                 'doc_count': bucket['doc_count']
             }
             for bucket in clusters_data
-        }
+        },
     }
 
+   
 
     #this might slow everything down bc needs to execute search multiple times
     cluster_totals = {}
-
+    first_occurrence = {}
     for key in clusters['Cluster']:
         cluster_data = clusters['Cluster'][key]
         cluster_id = key
 
-        
-        clustr = es.retrieve_cluster(cluster_id, query)
-        # cluster_total = es.retrieve_cluster(cluster_id)
+
+        clustr = retrieve_cluster_with_highlight(cluster_id, query)
+        for hit in clustr:
+            if hit['open'] == 'true' and cluster_id not in first_occurrence:
+                first_occurrence[cluster_id] = {
+                    "source": hit['source'],
+                    "date": hit['date'],
+                    "text": hit['text']
+                }
+
+
+        # clustr = es.retrieve_cluster(cluster_id, query)
         date = [document.get('date', '') for document in clustr]
-        placeOfPublication = [document.get('placeOfPublication', '') for document in clustr]
         
         if date:
             cluster_data['min_date'] = min(date)
@@ -169,7 +209,6 @@ def handle_search():
 
         cluster_totals[cluster_id] = len(date)
 
-
     return render_template('index.html', 
                         results=results['hits']['hits'],
                         query=query,
@@ -177,7 +216,8 @@ def handle_search():
                         total=results['hits']['total']['value'],
                         aggs=aggs,
                         clusters=clusters,
-                        cluster_totals=cluster_totals)
+                        cluster_totals=cluster_totals,
+                        first_occurrence=first_occurrence)
 
 @app.get('/document/<id>')
 def get_document(id):
