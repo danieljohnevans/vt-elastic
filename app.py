@@ -65,6 +65,7 @@ def handle_search():
                         'match_phrase': {
                         'text': parsed_query
                     }
+
                 }
     }
     else:
