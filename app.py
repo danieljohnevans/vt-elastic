@@ -4,6 +4,7 @@ from search import Search
 import csv
 import io
 from jinja2 import Undefined
+import os
 
 
 
@@ -323,4 +324,6 @@ def about():
     return render_template('about.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # app.run(debug=True)
+    app.wsgi_app = BasicAuthMiddleware(app.wsgi_app)
+    app.run()
