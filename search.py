@@ -3,7 +3,6 @@ from pprint import pprint
 
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
-from sentence_transformers import SentenceTransformer
 import os
 
 load_dotenv()
@@ -11,7 +10,7 @@ load_dotenv()
 
 class Search:
     def __init__(self):
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        # self.model = SentenceTransformer('all-MiniLM-L6-v2')
         # self.es = Elasticsearch('http://elastic-vt:9200') # < --- use for local docker 
 
         # self.es = Elasticsearch('http://localhost:9200')  # <-- connection options need to be added here
@@ -38,8 +37,8 @@ class Search:
     #         }
     #     })
     
-    def get_embedding(self, text):
-        return self.model.encode(text)
+    # def get_embedding(self, text):
+    #     return self.model.encode(text)
 
 
     # def insert_documents(self, documents):
