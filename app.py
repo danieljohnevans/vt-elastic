@@ -4,7 +4,6 @@ from search import Search
 import csv
 import io
 from jinja2 import Undefined
-import os
 
 
 
@@ -63,11 +62,8 @@ def handle_search():
         else:
             search_query = {
                 'must': {
-                    'multi_match': {
-                        'query': parsed_query,
-                        'fields': ['text'],
-                        # probably only want to search the text
-                        # 'fields': ['text', 'source', 'topdiv'],
+                        'match_phrase': {
+                        'text': parsed_query
                     }
                 }
     }
@@ -325,5 +321,4 @@ def about():
 
 if __name__ == '__main__':
     # app.run(debug=True)
-    app.wsgi_app = BasicAuthMiddleware(app.wsgi_app)
     app.run()
