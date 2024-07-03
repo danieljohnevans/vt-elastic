@@ -31,8 +31,8 @@
                 {% else %}
                     {{ place[index] }}
                 {% endif %}
-                {% if url[index] %}
-                | <a href="{{ url[index] }}" target="_blank">View witness in context</a>
+                {% if uid[index] %}
+                | <a href="/document/{{ uid[index] }}" target="_blank">View witness in context</a>
                 {% endif %}
 
 
