@@ -46,11 +46,20 @@ def index():
 #                            total=results['hits']['total']['value'])
 
 
-def retrieve_cluster_with_highlight(cluster_id, search_term):
+
+def process_clusters_results(clusters, search_phrase):
+
+    cluster_keys = [str(key) for key in clusters['Cluster'].keys()]
+
+
+# can adjust size here
     query = {
         "query": {
-            "match": {
-                "cluster": cluster_id
+            "bool": {
+                "must": [
+                    {"terms": {"cluster": cluster_keys}},
+                    {"match_phrase": {"text": search_phrase}}
+                ]
             }
         },
         "highlight": {
@@ -61,12 +70,38 @@ def retrieve_cluster_with_highlight(cluster_id, search_term):
                     "fragment_size": 250
                 }
             }
-        }
+        },
+        "size": 10
     }
+    results = es.search(body=query)
+    processed_data = []
 
-    result = es.retrieve_cluster(cluster_id, search_term)
-    
-    return result
+    # for cluster_name, cluster_data in clusters.items():
+    #     for key, data in cluster_data.items():
+    #         doc_count = data['doc_count']
+    #         result_found = False
+    #         result_details = {}
+
+    for hit in results['hits']['hits']:
+        open = hit['_source']['open']
+        cluster = hit['_source']['cluster']
+        source = hit['_source']['source']
+        date = hit['_source']['date']
+        text = hit['_source']['text']
+        highlight = hit['highlight']['text'][0]
+        
+        processed_data.append({
+            'open': open,
+            'cluster': cluster,
+            'source': source,
+            'date': date,
+            'text': text,
+            'highlight': highlight
+        })
+
+
+        pprint(processed_data)
+    return processed_data
 
 @app.post('/')
 def handle_search():
@@ -163,6 +198,8 @@ def handle_search():
     # },
     }
 
+    
+
 
     clusters_data = results['aggregations']['cluster-agg']['buckets']
 
@@ -175,8 +212,12 @@ def handle_search():
         },
     }
 
+    search_phrase = query
+
+    processed_clusters = process_clusters_results(clusters, search_phrase)
 
 
+    
 
     #this might slow everything down bc needs to execute search multiple times
     cluster_totals = {}
@@ -186,17 +227,7 @@ def handle_search():
         cluster_id = key
 
 
-        clustr = retrieve_cluster_with_highlight(cluster_id, query)
-        for hit in clustr:
-            if hit['open'] == 'true' and cluster_id not in first_occurrence:
-                first_occurrence[cluster_id] = {
-                    "source": hit['source'],
-                    "date": hit['date'],
-                    "text": hit['text']
-                }
-
-
-        # clustr = es.retrieve_cluster(cluster_id, query)
+        clustr = es.retrieve_cluster(cluster_id, query)
         date = [document.get('date', '') for document in clustr]
         
         if date:
@@ -208,12 +239,6 @@ def handle_search():
             cluster_data['max_date'] = None
 
         cluster_totals[cluster_id] = len(date)
-    
-    if query.startswith('"') and query.endswith('"'):
-        search_term = query[1:-1]
-    
-    else:
-        search_term=query
 
 
     return render_template('index.html', 
@@ -225,7 +250,7 @@ def handle_search():
                         clusters=clusters,
                         cluster_totals=cluster_totals,
                         first_occurrence=first_occurrence,
-                        search_term=search_term)
+                        processed_clusters=processed_clusters)
 
 @app.get('/document/<id>')
 def get_document(id):
