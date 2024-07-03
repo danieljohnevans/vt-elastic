@@ -65,6 +65,7 @@ def retrieve_cluster_with_highlight(cluster_id, search_term):
     }
 
     result = es.retrieve_cluster(cluster_id, search_term)
+    
     return result
 
 @app.post('/')
@@ -165,7 +166,6 @@ def handle_search():
 
     clusters_data = results['aggregations']['cluster-agg']['buckets']
 
-
     clusters = {
         'Cluster': {
             bucket['key']: {
@@ -175,7 +175,8 @@ def handle_search():
         },
     }
 
-   
+
+
 
     #this might slow everything down bc needs to execute search multiple times
     cluster_totals = {}
@@ -201,13 +202,19 @@ def handle_search():
         if date:
             cluster_data['min_date'] = min(date)
             cluster_data['max_date'] = max(date)
-        # if placeOfPublication:
-        #     cluster_data['placeOfPublication'] = placeOfPublication
+
         else:
             cluster_data['min_date'] = None
             cluster_data['max_date'] = None
 
         cluster_totals[cluster_id] = len(date)
+    
+    if query.startswith('"') and query.endswith('"'):
+        search_term = query[1:-1]
+    
+    else:
+        search_term=query
+
 
     return render_template('index.html', 
                         results=results['hits']['hits'],
@@ -217,7 +224,8 @@ def handle_search():
                         aggs=aggs,
                         clusters=clusters,
                         cluster_totals=cluster_totals,
-                        first_occurrence=first_occurrence)
+                        first_occurrence=first_occurrence,
+                        search_term=search_term)
 
 @app.get('/document/<id>')
 def get_document(id):

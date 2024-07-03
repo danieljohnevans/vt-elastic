@@ -77,11 +77,12 @@
                                     <h5 class="mb-0">{{ cluster_totals[key] }} reprints from {{ min_date }} to {{ max_date }}</h5>                             </a>
                                     <p class="mb-0"><b>Matching Witnesses:</b> {{ doc_count }}</p>
                              </div> 
+
                              {% if first_occurrence and key in first_occurrence %}
                              <p style="margin-top: 0rem;">
                                  <b>Source:</b> {{ first_occurrence[key]['source'] }}
                                  <br><b>Date:</b> {{ first_occurrence[key]['date'] }}
-                                 <br><b>Text:</b> {{ first_occurrence[key]['text'] | safe }}
+                                 <br><b>Text:</b> {{ first_occurrence[key]['text'] |replace(search_term, '<b>' + search_term + '</b>')|safe }}
                              </p>
                          {% else %}
                          <p>All witnesses in this cluster come from a proprietary database and cannot be displayed.</p>                         
