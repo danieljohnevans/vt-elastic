@@ -31,7 +31,8 @@
                 {% else %}
                     {{ place[index] }}
                 {% endif %}
-                {% if uid[index] %}
+                
+                {% if uid[index] and open[index] == "true" %}
                 | <a href="/document/{{ uid[index] }}" target="_blank">View witness in context</a>
                 {% endif %}
 
@@ -47,9 +48,14 @@
 
         {% endfor %}
     </div>
-
             <div class="col-md-6">
+                {% if corpus[index] == "ca" %}
+
+                <img src="{{ ca_images[index] }}" alt="Thumbnail" onerror="this.style.display='none';" class="img-fluid ">
+                {% elif corpus[index] != "ca" %}
+
                 <img src="{{ images[index] }}" alt="Thumbnail" onerror="this.style.display='none';" class="img-fluid ">
+                {% endif %}
             </div>
     {% elif open[index] == "false" %}
         <div class="col-md-12">

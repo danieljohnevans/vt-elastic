@@ -281,13 +281,56 @@ def get_document(id):
     else:
         canvas_index = None
 
+    if '_source' in document and 'series' in document['_source']:
+        series=document['_source']['series']
+    else:
+        group = None
+
+    if '_source' in document and 'ed' in document['_source']:
+        ed=document['_source']['ed']
+    else:
+        ed = None
+    
+    if '_source' in document and 'pp' in document['_source']:
+        pp=document['_source']['pp']
+    else:
+        pp = None
+
+            
+
+
+    # to convert chron am image urls
+    if corpus == 'ca':
+        ca_images = images
+    else:
+        ca_images = ''
+
+    regex = re.compile(r"https://chroniclingamerica\.loc\.gov/iiif/2/(service%2F[\w%2F]+)\.jp2(/pct:[\d.,]+/full/0/default\.jpg)")
+
+    match = regex.match(ca_images)
+    if match:
+        identifier = match.group(1)
+        region_and_more = match.group(2)
+        identifier_parts = identifier.split('%2F')
+        new_identifier = ':'.join(identifier_parts) + region_and_more
+
+        base_url = "https://tile.loc.gov/image-services/iiif/"
+        ca_images = f"{base_url}{new_identifier}"
+
+        print(ca_images)
+    else:
+        # print("The URL format is not recognized.")
+        ca_images = None
+
+
     title = document['_source']['source']
     paragraphs = document['_source']['text'].split('\n')
     # place = document['_source']['placeOfPublication']
     date = document['_source']['date']
     open=document['_source']['open']
     manifest_id=document['_source']['id']
-    return render_template('document.html', title=title, paragraphs=paragraphs, images=images, url=url, coverage=coverage, date=date, open=open, search_term=search_term, corpus=corpus,manifest_id=manifest_id,canvas_index=canvas_index)
+
+    return render_template('document.html', title=title, paragraphs=paragraphs, images=images, url=url, coverage=coverage, date=date, open=open, search_term=search_term, corpus=corpus,manifest_id=manifest_id,canvas_index=canvas_index, ca_image=ca_images,series=series,ed=ed,pp=pp)
 
 @app.get('/cluster/<cluster_id>')
 def get_cluster(cluster_id):
@@ -319,7 +362,31 @@ def get_cluster(cluster_id):
         searching_by_cluster = es.search(query=search_query)
         searching_by_cluster = searching_by_cluster['hits']
         uid = [hit['_id'] for hit in searching_by_cluster['hits']]
+        print(corpus)
 
+        ca_images = []
+            # to convert chron am image urls
+        for item in corpus:
+            if item == 'ca':
+                ca_image = images
+
+                regex = re.compile(r"https://chroniclingamerica\.loc\.gov/iiif/2/(service%2F[\w%2F]+)\.jp2(/pct:[\d.,]+/full/0/default\.jpg)")
+                for i in ca_image:
+                    match = regex.match(i)
+                    if match:
+                        identifier = match.group(1)
+                        region_and_more = match.group(2)
+                        identifier_parts = identifier.split('%2F')
+                        new_identifier = ':'.join(identifier_parts) + region_and_more
+
+                        base_url = "https://tile.loc.gov/image-services/iiif/"
+                        ca_image = f"{base_url}{new_identifier}"
+                        ca_images.append(ca_image)
+
+                        # print(new_url)
+                    else:
+                        # print("The URL format is not recognized.")
+                        pass
 
 
 
@@ -339,7 +406,7 @@ def get_cluster(cluster_id):
 
             return response
 
-        return render_template('cluster.html', titles=titles, paragraphs=paragraphs, place=place, date=date, open=open, url=url, coverage=coverage, images=images, search_term=search_term, cluster_id=cluster_id, uid=uid)
+        return render_template('cluster.html', titles=titles, paragraphs=paragraphs, place=place, date=date, open=open, url=url, coverage=coverage, images=images, search_term=search_term, cluster_id=cluster_id, uid=uid, ca_images=ca_images, corpus=corpus)
 
     return render_template('cluster.html', titles=[])
 

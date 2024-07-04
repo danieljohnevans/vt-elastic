@@ -47,7 +47,13 @@
             </div>
         
         {% elif corpus == "ia" %}
-        <div id="my-mirador"></div>
+        <div id="ia-mirador"></div>
+
+        {% elif corpus == "ca" %}
+
+        <div id="ca-mirador"></div>
+
+
 
         {% endif %}
 
@@ -56,9 +62,12 @@
 
         <script type="text/javascript">
             document.addEventListener("DOMContentLoaded", function() {
-                const manifestId = `https://iiif.archive.org/iiif/3/{{ manifest_id }}/manifest.json`;
+                const ia_manifestId = `https://iiif.archive.org/iiif/3/{{ manifest_id }}/manifest.json`;
+                const loc_manifestI = `https://www.loc.gov/item{{series}}/{{date}}/ed-{{ed}}/manifest.json`;
+                const loc_manifestId = loc_manifestI.replace('/lccn', '')
 
-                fetch(manifestId)
+
+                fetch(ia_manifestId)
                 .then(response => response.json())
                 .then(manifest => {
                     console.log(manifest); 
@@ -73,10 +82,10 @@
 
 
                 const miradorInstance = Mirador.viewer({
-                id: "my-mirador",
+                id: "ia-mirador",
                 windows: [
                     {
-                    manifestId: manifestId,
+                    manifestId: ia_manifestId,
                         // "https://www.loc.gov/item/sn84020071/1838-08-02/ed-1/manifest.json",
                         "canvasIndex": {{ canvas_index }},
                         view: 'single',
@@ -90,7 +99,7 @@
                     }
                 });
 
-                console.log(manifestId);
+                console.log(ia_manifestId);
 
                 const windowId = Object.keys(miradorInstance.store.getState().windows)[0];
 
