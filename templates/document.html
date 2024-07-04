@@ -3,7 +3,6 @@
 {% block content %}
     <div class="row">
         <p><a href="javascript:history.back(1)" class="btn btn-primary">← Back</a></p>
-        <div id="my-mirador"></div>
 
         <h2 class="text-center">From 
             {% if url %}
@@ -22,7 +21,7 @@
                 {% endif %}
             </b>
         </p>    
-        {% if open == "true" %}
+        {% if open == "true" and corpus != "ia"%}
             <div class="col-md-6">
                 {% for paragraph in paragraphs %}
                     {% set highlighted_paragraph = paragraph|replace(search_term, '<strong>' + search_term + '</strong>')|safe %}
@@ -46,21 +45,40 @@
                     <p><a href="{{ url }}" target="_blank">{{ url }}</a></p>
                 {% endif %}
             </div>
+        
+        {% elif corpus == "ia" %}
+        <div id="my-mirador"></div>
+
         {% endif %}
 
         <script src="https://unpkg.com/mirador@latest/dist/mirador.min.js"></script>
 
 
         <script type="text/javascript">
-            
+            document.addEventListener("DOMContentLoaded", function() {
+                const manifestId = `https://iiif.archive.org/iiif/3/{{ manifest_id }}/manifest.json`;
+
+                fetch(manifestId)
+                .then(response => response.json())
+                .then(manifest => {
+                    console.log(manifest); 
+                    
+                    const page = manifest.items[{{canvas_index}}];
+
+                    const canvasDimensions = {
+                        width: page.width,
+                        height: page.height
+                    };
+
+
 
                 const miradorInstance = Mirador.viewer({
                 id: "my-mirador",
                 windows: [
                     {
-                    manifestId:
-                        "https://www.loc.gov/item/sn84020071/1838-08-02/ed-1/manifest.json",
-                        "canvasIndex": 2,
+                    manifestId: manifestId,
+                        // "https://www.loc.gov/item/sn84020071/1838-08-02/ed-1/manifest.json",
+                        "canvasIndex": {{ canvas_index }},
                         view: 'single',
 
                     },
@@ -72,20 +90,21 @@
                     }
                 });
 
-                console.log(miradorInstance);
+                console.log(manifestId);
 
                 const windowId = Object.keys(miradorInstance.store.getState().windows)[0];
 
-                const percentages_boxToZoom = {
-                x: 41.319597,
-                y: 61.540608,
-                width: 16.905962,
-                height: 8.990371
-                };
+                const pageImageUrl = "{{ images }}";
 
-                const canvasDimensions = {
-                width: 4562,
-                height: 7166
+                const percentagesPart = pageImageUrl.match(/pct:([^/]+)/)[1];
+
+                const [x, y, width, height] = percentagesPart.split(',').map(parseFloat);
+
+                const percentages_boxToZoom = {
+                x: x,
+                y: y,
+                width: width,
+                height: height
                 };
 
                 const boxToZoom = {
@@ -103,13 +122,18 @@
                 var action = Mirador.actions.updateViewport(windowId, {
                 x: zoomCenter.x,
                 y: zoomCenter.y,
-                zoom: 1 / boxToZoom.width
+                zoom: 0.5 / boxToZoom.width
                 });
 
                 // fix timeout 
                 setTimeout(() => {
                 miradorInstance.store.dispatch(action);
-                }, 2000);
+                }, 2000)
+                });
+            })
+
+                
+            
 
             </script>
     </div>

@@ -257,6 +257,9 @@ def get_document(id):
     document = es.retrieve_document(id)
     search_term = request.args.get('search_term', '')
 
+    corpus = document['_source']['corpus']
+
+
     if '_source' in document and 'page_image' in document['_source']:
         images = document['_source']['page_image']
     else:
@@ -273,12 +276,18 @@ def get_document(id):
     else:
         coverage = None
 
+    if '_source' in document and 'p1seq' in document['_source']:
+        canvas_index=document['_source']['p1seq']
+    else:
+        canvas_index = None
+
     title = document['_source']['source']
     paragraphs = document['_source']['text'].split('\n')
     # place = document['_source']['placeOfPublication']
     date = document['_source']['date']
     open=document['_source']['open']
-    return render_template('document.html', title=title, paragraphs=paragraphs, images=images, url=url, coverage=coverage, date=date, open=open, search_term=search_term)
+    manifest_id=document['_source']['id']
+    return render_template('document.html', title=title, paragraphs=paragraphs, images=images, url=url, coverage=coverage, date=date, open=open, search_term=search_term, corpus=corpus,manifest_id=manifest_id,canvas_index=canvas_index)
 
 @app.get('/cluster/<cluster_id>')
 def get_cluster(cluster_id):
