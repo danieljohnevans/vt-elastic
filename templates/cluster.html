@@ -31,6 +31,7 @@
                 {% else %}
                     {{ place[index] }}
                 {% endif %}
+
                 
                 {% if uid[index] and open[index] == "true" %}
                 | <a href="/document/{{ uid[index] }}" target="_blank">View witness in context</a>

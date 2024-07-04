@@ -352,17 +352,21 @@ def get_cluster(cluster_id):
         paragraphs = [document.get('text', '').split('\n') for document in cluster]
         csv_paragraphs = [document.get('text', '') for document in cluster]
         place = [document.get('placeOfPublication', '') for document in cluster]
+        ia_place = [document.get('placeOfPublication', '') for document in cluster]
+
         date = [document.get('date', '') for document in cluster]
         open= [document.get('open', '') for document in cluster]
         corpus = [document.get('corpus', '') for document in cluster]
         cluster= [document.get('cluster', '') for document in cluster]
 
 
-        search_query = {"match": {"cluster": cluster[1]}}
-        searching_by_cluster = es.search(query=search_query)
+        search_query = {"match": {"cluster": cluster[5]}}
+        first = es.search(query=search_query)
+        hits_count = first['hits']['total']['value']
+        size = hits_count
+        searching_by_cluster = es.search(query=search_query, size=size)
         searching_by_cluster = searching_by_cluster['hits']
         uid = [hit['_id'] for hit in searching_by_cluster['hits']]
-        print(corpus)
 
         ca_images = []
             # to convert chron am image urls
@@ -406,7 +410,7 @@ def get_cluster(cluster_id):
 
             return response
 
-        return render_template('cluster.html', titles=titles, paragraphs=paragraphs, place=place, date=date, open=open, url=url, coverage=coverage, images=images, search_term=search_term, cluster_id=cluster_id, uid=uid, ca_images=ca_images, corpus=corpus)
+        return render_template('cluster.html', titles=titles, paragraphs=paragraphs, place=place, date=date, open=open, url=url, coverage=coverage, images=images, search_term=search_term, cluster_id=cluster_id, uid=uid, ca_images=ca_images, corpus=corpus, ia_place=ia_place)
 
     return render_template('cluster.html', titles=[])
 
