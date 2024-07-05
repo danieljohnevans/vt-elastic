@@ -21,8 +21,8 @@
                 {% endif %}
             </b>
         </p>    
-        {% if open == "true" and corpus != "ia"%}
-            <div class="col-md-6">
+        {% if open == "true" and (corpus != "ia" and corpus != "ca") %}
+        <div class="col-md-6">
                 {% for paragraph in paragraphs %}
                     {% set highlighted_paragraph = paragraph|replace(search_term, '<strong>' + search_term + '</strong>')|safe %}
                 <p>{{ highlighted_paragraph }}</p>
@@ -64,87 +64,91 @@
             document.addEventListener("DOMContentLoaded", function() {
                 const ia_manifestId = `https://iiif.archive.org/iiif/3/{{ manifest_id }}/manifest.json`;
                 const loc_manifestI = `https://www.loc.gov/item{{series}}/{{date}}/ed-{{ed}}/manifest.json`;
-                const loc_manifestId = loc_manifestI.replace('/lccn', '')
-
-
-                fetch(ia_manifestId)
-                .then(response => response.json())
-                .then(manifest => {
-                    console.log(manifest); 
-                    
-                    const page = manifest.items[{{canvas_index}}];
-
-                    const canvasDimensions = {
-                        width: page.width,
-                        height: page.height
-                    };
-
-
-
-                const miradorInstance = Mirador.viewer({
-                id: "ia-mirador",
-                windows: [
-                    {
-                    manifestId: ia_manifestId,
-                        // "https://www.loc.gov/item/sn84020071/1838-08-02/ed-1/manifest.json",
-                        "canvasIndex": {{ canvas_index }},
-                        view: 'single',
-
-                    },
-                ],
-                    window: {
-                        defaultView: 'single',
-                        highlightAllAnnotations: true,
-                        forceDrawAnnotations: true,
-                    }
-                });
-
-                console.log(ia_manifestId);
-
-                const windowId = Object.keys(miradorInstance.store.getState().windows)[0];
-
+                const loc_manifestId = loc_manifestI.replace('/lccn', '');
+        
+                const canvasIndex = {{ canvas_index }};
                 const pageImageUrl = "{{ images }}";
-
-                const percentagesPart = pageImageUrl.match(/pct:([^/]+)/)[1];
-
-                const [x, y, width, height] = percentagesPart.split(',').map(parseFloat);
-
-                const percentages_boxToZoom = {
-                x: x,
-                y: y,
-                width: width,
-                height: height
-                };
-
-                const boxToZoom = {
-                x: (percentages_boxToZoom.x / 100) * canvasDimensions.width,
-                y: (percentages_boxToZoom.y / 100) * canvasDimensions.height,
-                width: (percentages_boxToZoom.width / 100) * canvasDimensions.width,
-                height: (percentages_boxToZoom.height / 100) * canvasDimensions.height
-                };
-
-                const zoomCenter = {
-                x: boxToZoom.x + boxToZoom.width / 2,
-                y: boxToZoom.y + boxToZoom.height / 2
-                };
-
-                var action = Mirador.actions.updateViewport(windowId, {
-                x: zoomCenter.x,
-                y: zoomCenter.y,
-                zoom: 0.5 / boxToZoom.width
-                });
-
-                // fix timeout 
-                setTimeout(() => {
-                miradorInstance.store.dispatch(action);
-                }, 2000)
-                });
-            })
-
-                
-            
-
-            </script>
+        
+                function setupMirador(manifestId, canvasDimensions, viewerId, item_canvasIndex) {
+                    const miradorInstance = Mirador.viewer({
+                        id: viewerId,
+                        windows: [
+                            {
+                                manifestId: manifestId,
+                                canvasIndex: item_canvasIndex,
+                                view: 'single',
+                            },
+                        ],
+                        window: {
+                            defaultView: 'single',
+                            highlightAllAnnotations: true,
+                            forceDrawAnnotations: true,
+                        }
+                    });
+        
+                    console.log(manifestId);
+        
+                    const windowId = Object.keys(miradorInstance.store.getState().windows)[0];
+        
+                    const percentagesPart = pageImageUrl.match(/pct:([^/]+)/)[1];
+                    const [x, y, width, height] = percentagesPart.split(',').map(parseFloat);
+        
+                    const percentages_boxToZoom = { x: x, y: y, width: width, height: height };
+                    const boxToZoom = {
+                        x: (percentages_boxToZoom.x / 100) * canvasDimensions.width,
+                        y: (percentages_boxToZoom.y / 100) * canvasDimensions.height,
+                        width: (percentages_boxToZoom.width / 100) * canvasDimensions.width,
+                        height: (percentages_boxToZoom.height / 100) * canvasDimensions.height
+                    };
+        
+                    const zoomCenter = {
+                        x: boxToZoom.x + boxToZoom.width / 2,
+                        y: boxToZoom.y + boxToZoom.height / 2
+                    };
+        
+                    const action = Mirador.actions.updateViewport(windowId, {
+                        x: zoomCenter.x,
+                        y: zoomCenter.y,
+                        zoom: 0.5 / boxToZoom.width
+                    });
+        
+                    setTimeout(() => {
+                        miradorInstance.store.dispatch(action);
+                    }, 2000);
+                }
+        
+                fetch(ia_manifestId)
+                    .then(response => response.json())
+                    .then(manifest => {
+                        console.log('Internet Archive Manifest:', manifest);
+        
+                        const page = manifest.items[canvasIndex];
+                        const canvasDimensions = { width: page.width, height: page.height };
+        
+                        setupMirador(ia_manifestId, canvasDimensions, 'ia-mirador', canvasIndex);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching IA manifest:', error);
+                    });
+        
+                fetch(loc_manifestId)
+                    .then(response => response.json())
+                    .then(locManifest => {
+                        console.log('Library of Congress Manifest:', locManifest);
+        
+                        const locPage = locManifest.sequences[0].canvases[canvasIndex - 1];
+                        const locCanvasDimensions = { width: locPage.width, height: locPage.height };
+                        console.log(locCanvasDimensions);
+        
+                        const loc_canvas_index = canvasIndex - 1;
+        
+                        setupMirador(loc_manifestId, locCanvasDimensions, 'ca-mirador', loc_canvas_index);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching LOC manifest:', error);
+                    });
+            });
+        </script>
     </div>
 {% endblock %}
 
