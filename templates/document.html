@@ -78,10 +78,14 @@
                                 canvasIndex: item_canvasIndex,
                                 view: 'single',
                             },
+                            // {
+    //   manifestId: "https://scta.info/iiif/plaoulcommentary/sorb/manifest", //add a manifest here that you want to miror to display onload
+    //   canvasId: "http://scta.info/iiif/sorb/canvas/S2r" //add a canvas here within the above manifest that you want mirador to open on load
+    // },
                         ],
                         window: {
                             defaultView: 'single',
-                            highlightAllAnnotations: true,
+                            highlightAllAnnotations: false,
                             forceDrawAnnotations: true,
                         }
                     });

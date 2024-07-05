@@ -25,6 +25,7 @@ def index():
 
 
 # this is for embedding search
+
 # @app.post('/')
 # def handle_search():
 #     query = request.form.get('query', '')
@@ -44,7 +45,6 @@ def index():
 #     return render_template('index.html', results=results['hits']['hits'],
 #                            query=query, from_=from_,
 #                            total=results['hits']['total']['value'])
-
 
 
 def process_clusters_results(clusters, search_phrase):
@@ -120,7 +120,7 @@ def handle_search():
         else:
             search_query = {
                 'must': {
-                        'match_phrase': {
+                        'match': {
                         'text': parsed_query
                     }
 
@@ -129,7 +129,7 @@ def handle_search():
     else:
         search_query = {
             'must': {
-                'match_phrase': {}
+                'match_all': {}
             }
         }
 
@@ -146,38 +146,42 @@ def handle_search():
     # print(hits_count)
 
     results = es.search(
-        query={
-            'bool': {
-                **search_query,
-                **filters,
-            },          
-        },
-        aggs={
-        'category-agg': {
-            'terms': {
-                'field': 'topdiv.keyword',
-            }
-        },
-        'year-agg': {
-                'date_histogram': {
-                    'field': 'date',
-                    'calendar_interval': 'year',
-                    'format': 'yyyy',
+        body={
+            'query': {
+                'bool': {
+                    **search_query,
+                    **filters,
+                }
+            },
+            'aggs': {
+                'category-agg': {
+                    'terms': {
+                        'field': 'topdiv.keyword',
+                    }
+                },
+                'year-agg': {
+                    'date_histogram': {
+                        'field': 'date',
+                        'calendar_interval': 'year',
+                        'format': 'yyyy',
+                    }
+                },
+                'cluster-agg': {
+                    'terms': {
+                        'field': 'cluster',
+                    }
                 },
             },
-        'cluster-agg': {
-                'terms': {
-                    'field': 'cluster',
+            'size': 10,  
+            'from': from_,  
+            'highlight': {
+                'fields': {
+                    'text': {
+                        "pre_tags": ["<b>"], "post_tags": ["</b>"],
+                        'fragment_size': 250
+                    }
                 }
-        },
-    },
-        size=10,
-        from_=from_,
-        highlight={
-        'fields': {
-            'text': { "pre_tags" : ["<b>"], "post_tags" : ["</b>"],
-                      'fragment_size': 250}
-        }
+            }
         }
     )
 
@@ -211,6 +215,8 @@ def handle_search():
         },
     }
 
+    total_doc_count = sum(bucket['doc_count'] for bucket in clusters['Cluster'].values())
+
     search_phrase = query
 
     processed_clusters = process_clusters_results(clusters, search_phrase)
@@ -237,8 +243,8 @@ def handle_search():
             cluster_data['min_date'] = None
             cluster_data['max_date'] = None
 
+        
         cluster_totals[cluster_id] = len(date)
-
 
     return render_template('index.html', 
                         results=results['hits']['hits'],
@@ -249,7 +255,7 @@ def handle_search():
                         clusters=clusters,
                         cluster_totals=cluster_totals,
                         first_occurrence=first_occurrence,
-                        processed_clusters=processed_clusters)
+                        processed_clusters=processed_clusters, total_doc_count=total_doc_count)
 
 @app.get('/document/<id>')
 def get_document(id):
