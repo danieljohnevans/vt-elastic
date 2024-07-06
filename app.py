@@ -1,5 +1,5 @@
 import re
-from flask import Flask, render_template, request, Response, redirect, url_for
+from flask import Flask, render_template, request, Response, redirect, url_for, jsonify
 from search import Search
 import csv
 import io
@@ -120,7 +120,7 @@ def handle_search():
         else:
             search_query = {
                 'must': {
-                        'match': {
+                        'match_phrase': {
                         'text': parsed_query
                     }
 
@@ -141,9 +141,6 @@ def handle_search():
         #         **filters,
         #     },          
         # })
-    # hits_count = result['hits']['total']['value']
-    # size = hit_counts
-    # print(hits_count)
 
     results = es.search(
         body={
@@ -185,6 +182,8 @@ def handle_search():
         }
     )
 
+
+
     aggs = {
     'Location': {
         bucket['key']: bucket['doc_count']
@@ -220,6 +219,7 @@ def handle_search():
     search_phrase = query
 
     processed_clusters = process_clusters_results(clusters, search_phrase)
+
 
 
     
@@ -366,7 +366,7 @@ def get_cluster(cluster_id):
         cluster= [document.get('cluster', '') for document in cluster]
 
 
-        search_query = {"match": {"cluster": cluster[5]}}
+        search_query = {"match": {"cluster": cluster[-1]}}
         first = es.search(query=search_query)
         hits_count = first['hits']['total']['value']
         size = hits_count

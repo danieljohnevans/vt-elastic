@@ -7,7 +7,7 @@
           
       </div>
     </form>
-    {% if results %}
+    {% if clusters %}
         <div class="row mb-3">
             <div class="col-2 mt-2">
                 <p><a href="javascript:history.back(1)">← Back</a></p>
@@ -33,19 +33,18 @@
             <div class="col-10">
                 <div class="row mb-3">
                     <div class="col-sm-auto my-auto">
-
-                        Showing results {{ from_ + 1 }}-{{ from_ + total_doc_count }} out of {{ total }}.
+                        Showing results {{ from_ + 1 }}-{{ from_ + results|length }} out of {{ total }}.
                     </div>
                     {% if from_ > 0 %}
                         <div class="col-sm-auto my-auto">
                             <a href="javascript:history.back(1)" class="btn btn-primary">← Previous page</a>
                         </div>
                     {% endif %}
-                    {% if from_ + total_doc_count < total %}
+                    {% if from_ + results|length < total %}
                         <div class="col-sm-auto my-auto">
-                            <form method="POST" action="{{ url_for('handle_search') }}">
+                            <form method="POST" action="{{ url_for('handle_search') }}>
                                 <input type="hidden" name="query" value="{{ query }}">
-                                <input type="hidden" name="from_" value="{{ from_ + total_doc_count }}">
+                                <input type="hidden" name="from_" value="{{ from_ + cluster|length }}">
                                 <button type="submit" class="btn btn-primary">Next page →</button>
                             </form>
                         </div>
@@ -73,7 +72,7 @@
                             {% set min_date = data['min_date'] %}
                             {% set max_date = data['max_date'] %}
                             <div data-min_date="{{ min_date }}" data-max_date="{{ max_date }}">
-                            <a href="{{ url_for('get_cluster', cluster_id=key, search_term=query) }}">
+                            <a href="{{ url_for('get_cluster', cluster_id=k, search_term=query) }}">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h5 class="mb-0">{{ cluster_totals[k] }} reprints from {{ min_date }} to {{ max_date }}</h5>                             </a>
                                     <!-- <p>{{k}}</p> -->

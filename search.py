@@ -125,3 +125,9 @@ class Search:
             return [hit['_source'] for hit in result['hits']['hits']]
         else:
             return None
+        
+    def scroll(self, scroll_id, scroll):
+        return self.es.scroll(scroll_id=scroll_id, scroll=scroll)
+
+    def clear_scroll(self, scroll_id):
+        self.es.clear_scroll(scroll_id=scroll_id)
