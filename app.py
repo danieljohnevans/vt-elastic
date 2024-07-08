@@ -400,9 +400,9 @@ def get_cluster(cluster_id):
 
 
 
-        filtered_data = [(title, csv_paragraphs, p, d, o, u, c, i)
-                 if o.lower() == 'true' else (title, '', p, d, o, u, c, i)
-                 for title, csv_paragraphs, p, d, o, u, c, i in zip(titles, csv_paragraphs, place, date, open, url, coverage, images)]
+        filtered_data = [(title, csv_paragraphs, p, d, o, u, c, i, n, m)
+                 if o.lower() == 'true' else (title, '', p, d, o, u, c, i, n, m)
+                 for title, csv_paragraphs, p, d, o, u, c, i, n, m in zip(titles, csv_paragraphs, place, date, open, url, coverage, images, uid, cluster)]
 
         if request.args.get('download_csv'):
             csv_filename = f'cluster_{cluster_id}_data.csv'
