@@ -424,7 +424,7 @@ def csv_generator(data):
     csv_buffer = io.StringIO()
     csv_writer = csv.writer(csv_buffer)
 
-    csv_writer.writerow(['Title', 'Paragraphs', 'Place', 'Date', 'Open', 'URL', 'Coverage', 'Images'])
+    csv_writer.writerow(['Title', 'Paragraphs', 'Place', 'Date', 'Open', 'URL', 'Coverage', 'Images', 'Witness_id', 'Cluster_id'])
 
     for row in data:
         csv_writer.writerow(row)
