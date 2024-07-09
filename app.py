@@ -427,12 +427,7 @@ def csv_generator(data):
     csv_writer.writerow(['Title', 'Paragraphs', 'Place', 'Date', 'Open', 'URL', 'Coverage', 'Images', 'Witness_id', 'Cluster_id'])
 
     for row in data:
-        modified_row = list(row)
-        if modified_row[1]: 
-            modified_row[1] = f'""{modified_row[1]}""'
-        csv_writer.writerow(modified_row)
-
-    # return csv_buffer.getvalue()
+        csv_writer.writerow(row)
 
     csv_buffer.seek(0)
     yield csv_buffer.read()
