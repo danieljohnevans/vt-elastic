@@ -33,18 +33,19 @@
             <div class="col-10">
                 <div class="row mb-3">
                     <div class="col-sm-auto my-auto">
-                        Showing results {{ from_ + 1 }}-{{ from_ + results|length }} out of {{ total }}.
+                        Showing results {{ from_ + 1 }}-{{ from_ + clusters_results|length }} out of {{ total }}.
                     </div>
                     {% if from_ > 0 %}
                         <div class="col-sm-auto my-auto">
                             <a href="javascript:history.back(1)" class="btn btn-primary">← Previous page</a>
                         </div>
                     {% endif %}
-                    {% if from_ + results|length < total %}
+                    {% if from_ + clusters_results|length < total %}
                         <div class="col-sm-auto my-auto">
-                            <form method="POST" action="{{ url_for('handle_search') }}>
+                            <form method="POST" action="{{ url_for('handle_search') }}">
                                 <input type="hidden" name="query" value="{{ query }}">
-                                <input type="hidden" name="from_" value="{{ from_ + cluster|length }}">
+
+                                <input type="hidden" name="from_" value="{{ from_ + clusters_results|length }}">
                                 <button type="submit" class="btn btn-primary">Next page →</button>
                             </form>
                         </div>
@@ -67,43 +68,41 @@
                     </div>
                     <hr style="border-width: 2px;">
                     <div id="{{ cluster_name.replace(' ', '_') }}_clusters">
-                        {% for k, data in cluster_data.items() %}
-                            {% set doc_count = data['doc_count'] %}
-                            {% set min_date = data['min_date'] %}
-                            {% set max_date = data['max_date'] %}
+                        
+                        {% for k, data in clusters_results.items() %}
+                        
+                        {% for entry in data %}
+                        {% if loop.first %}
+                            {% set doc_count = entry.count %}
+                            {% set min_date = entry.min_date %}
+                            {% set max_date = entry.max_date %}
                             <div data-min_date="{{ min_date }}" data-max_date="{{ max_date }}">
                             <a href="{{ url_for('get_cluster', cluster_id=k, search_term=query) }}">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h5 class="mb-0">{{ cluster_totals[k] }} reprints from {{ min_date }} to {{ max_date }}</h5>                             </a>
-                                    <!-- <p>{{k}}</p> -->
                                     <p class="mb-0"><b>Matching Witnesses:</b> {{ doc_count }}</p>
                              </div> 
                            
-                                {% for cluster in processed_clusters %}
 
-                                {% if cluster.cluster == k %}
                                         <p style="margin-top: 0rem;">
                                             
-                                            <b>Source:</b> {{ cluster.source }}
-                                            <br><b>Date:</b> {{ cluster.date }}
-                                            {% if cluster.highlight %}
-                                            <br><b>Text:</b> {{ cluster.highlight | safe }}
+                                            <b>Source:</b> {{ entry.source }}
+                                            <br><b>Date:</b> {{ entry.date }}
+                                            {% if entry.highlight %}
+                                            <br><b>Text:</b> {% if entry.highlight.text %}
+                                            {{ entry.highlight.text[0] | safe }}
+                                        {% else %}
+                                        All witnesses in this cluster come from a proprietary database and cannot be displayed.
+                                        {% endif %}
                                         </p>
-                                    <!-- {% if not cluster.result_found %}
-                                    <p>All witnesses in this cluster come from a proprietary database and cannot be displayed.</p>
-                                    {% endif %} -->
 
                                     {% endif %}
                                     {% endif %}
+
 
                                 {% endfor %}
                                 <hr >
 
-                                <!-- <ul>
-                                    {% for result in results %}
-                                        <li>{{ result._source.cluster }}</li>
-                                    {% endfor %}
-                                </ul> -->
                             </div>
                         {% endfor %}
                     </div>

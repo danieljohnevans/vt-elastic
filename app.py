@@ -85,7 +85,7 @@ def process_clusters_results(clusters, search_phrase):
     for hit in results['hits']['hits']:
         open = hit['_source']['open']
         cluster = hit['_source']['cluster']
-        source = hit['_source']['source']
+        source = hit['_source'].get('source', None)
         date = hit['_source']['date']
         text = hit['_source']['text']
         highlight = hit['highlight']['text'][0]
@@ -168,8 +168,14 @@ def handle_search():
                         'field': 'cluster',
                     }
                 },
+                'cluster-count': {
+                    'terms': {
+                        'field': 'cluster',
+                        'size': 1000
+                    }
+                },
             },
-            'size': 10,  
+            'size': 50,  
             'from': from_,  
             'highlight': {
                 'fields': {
@@ -181,6 +187,7 @@ def handle_search():
             }
         }
     )
+
 
 
 
@@ -200,7 +207,32 @@ def handle_search():
     # },
     }
 
-    
+    cluster_aggregation = { 'Cluster': {
+        bucket['key']: {'doc_count': bucket['doc_count']}
+        for bucket in results['aggregations']['cluster-count']['buckets']
+    },}
+
+
+    clusters_results = {}
+    for hit in results['hits']['hits']:
+        cluster = hit['_source'].get('cluster', None)
+        if cluster and cluster in cluster_aggregation['Cluster']:
+            # print(f"Cluster: {cluster}, Count: {cluster_aggregation['Cluster'][cluster]['doc_count']}")
+            source = hit['_source'].get('source', None)
+            highlight = hit['highlight']
+            date = hit['_source'].get('date', None)
+
+            if cluster not in clusters_results:
+                clusters_results[cluster] = []
+
+            clusters_results[cluster].append({
+                'source': source,
+                'highlight': highlight,
+                'date': date,
+                'count': cluster_aggregation['Cluster'][cluster]['doc_count']
+            })
+
+
 
 
     clusters_data = results['aggregations']['cluster-agg']['buckets']
@@ -220,31 +252,33 @@ def handle_search():
 
     processed_clusters = process_clusters_results(clusters, search_phrase)
 
+    cluster_date_info = {}
+    for key in clusters_results:
+        clustr = es.retrieve_cluster(key, query)
+        dates = [document.get('date', '') for document in clustr]
 
-
-    
-
-    #this might slow everything down bc needs to execute search multiple times
-    cluster_totals = {}
-    first_occurrence = {}
-    for key in clusters['Cluster']:
-        cluster_data = clusters['Cluster'][key]
-        cluster_id = key
-
-
-        clustr = es.retrieve_cluster(cluster_id, query)
-        date = [document.get('date', '') for document in clustr]
-        
-        if date:
-            cluster_data['min_date'] = min(date)
-            cluster_data['max_date'] = max(date)
-
+        if dates:
+            min_date = min(dates)
+            max_date = max(dates)
         else:
-            cluster_data['min_date'] = None
-            cluster_data['max_date'] = None
+            min_date = None
+            max_date = None
 
-        
-        cluster_totals[cluster_id] = len(date)
+        cluster_date_info[key] = {'min_date': min_date, 'max_date': max_date}
+
+    for key in clusters_results:
+        cluster_data = clusters_results[key]
+        date_info = cluster_date_info[key]
+
+        for entry in cluster_data:
+            entry['min_date'] = date_info['min_date']
+            entry['max_date'] = date_info['max_date']
+
+    cluster_totals = {key: len(es.retrieve_cluster(key, query)) for key in clusters_results}
+
+    # print(clusters_results)
+    # print(cluster_totals)
+    
 
     return render_template('index.html', 
                         results=results['hits']['hits'],
@@ -253,9 +287,10 @@ def handle_search():
                         total=results['hits']['total']['value'],
                         aggs=aggs,
                         clusters=clusters,
+                        clusters_results=clusters_results,
                         cluster_totals=cluster_totals,
-                        first_occurrence=first_occurrence,
-                        processed_clusters=processed_clusters, total_doc_count=total_doc_count)
+                        processed_clusters=processed_clusters, 
+                        total_doc_count=total_doc_count)
 
 @app.get('/document/<id>')
 def get_document(id):
@@ -323,7 +358,7 @@ def get_document(id):
         base_url = "https://tile.loc.gov/image-services/iiif/"
         ca_images = f"{base_url}{new_identifier}"
 
-        print(ca_images)
+        # print(ca_images)
     else:
         # print("The URL format is not recognized.")
         ca_images = None
