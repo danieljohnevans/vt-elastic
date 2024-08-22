@@ -2,7 +2,33 @@
 
 {% block content %}
 
-<h2>This is a basic about page to test routing</h2>
+<p>This database provides search and download access to the <a href="https://manifold.umn.edu/read/untitled-883630b9-c054-44e1-91db-d053a7106ecb/section/ea1f849a-bac1-4e9d-85f4-149d0083a6a4">“speculative bibliographies”</a> of reprinted nineteenth-century newspaper texts discovered through the <a href="https://viraltexts.org"><i>Viral Texts</i> project</a> at Northeastern University and the University of Illinois Urbana-Champaign. These clusters of texts have been matched using <a href="https://github.com/dasmiq/passim">Passim</a>, a tool which “implements algorithms for detecting and aligning similar passages in text.” For more about how we use text-reuse detection to study nineteenth-century newspaper reprinting, see our book, <a href="https://manifold.umn.edu/projects/going-the-rounds"><i>Going the Rounds</i></a>. The “Textual Criticism as Language Modeling” chapter describes our computational methods in detail.</p>
+
+
+<h3>Using this database</h3>
+
+<p>A few quick tips for using this tool to search newspaper reprints:</p>
+
+<ol style="display: flex; flex-direction: column; gap: 15px;">
+<li>When you search for a particular word or phrase, all the clusters in which it appears will be listed. You might find one text listed in multiple clusters, if for instance parts of it circulated in different forms. For reasons like that, sometimes our algorithm aligns different parts of texts and produces separate clusters where a scholar might group them together. If you notice particular trends in how this separation is happening, let us know—that information might help us improve our clustering. </li> 
+
+<li>Many historical newspaper archives do not divide page data into articles, and even those that do may not transcribe metadata for all individual texts on the page. Historically, many nineteenth-century newspaper texts did not include a headline/title, and the vast majority did not include authorial attribution. The names we assign to clusters, then, simply describe their structure (e.g. “38 reprints from 1870-09-24 to 1871-02-03”) rather than trying to identify the text within the cluster. </li> 
+
+<li>In addition to the number of reprints in the title of each cluster, search results in this tool will also list how many individual texts within the cluster match the search phrase: e.g. “8 texts match search.” Often texts within the same cluster—i.e. matched texts—do not include all the same words, due both to historical editorial changes, as well as to OCR errors in individual reprints. Our reprint-detection methods are “fuzzy” to enable us to match texts with significant internal differences, so we can connect texts that were edited while they circulated historically, as well as connect texts across digital archives made up of <a href="https://ryancordell.org/research/qijtb-the-raven/">“dirty OCR.”</a> </li> 
+
+<li>Our newspaper data is drawn from a number of digitized newspaper archives, most substantially <a href="https://chroniclingamerica.loc.gov">Chronicling America</a>, as well as open resources such as <a href="https://collections.library.cornell.edu/moa_new/browse.html">Making of America</a>, <a href="https://trove.nla.gov.au/newspaper/">Trove</a>, <a href="http://www.europeana-newspapers.eu">Europeana</a>,and the <a href="https://archive.org/details/texts">Internet Archive</a>. In addition, Viral Texts has secured permissions to datamine several corporate historical newspaper archives, including the <a href="https://about.proquest.com/en/products-services/aps/">ProQuest American Periodicals Series</a>, the <a href="https://www.gale.com/intl/c/british-library-newspapers-part-i">Gale British Library Newspapers: Part I: 1800-1900</a>, the <a href="https://www.gale.com/c/nineteenth-century-us-newspapers">Gale Nineteenth Century U.S. Newspapers</a>, and the <a href="https://coherentdigital.net/aanw">Accessible Archives African-American Newspapers</a> collections. Whenever possible, we link directly to the digitized page where each witness appears. However, we cannot reproduce data discovered in corporate archives. When a witness was discovered in proprietary data, the title and date of the reprint will be listed with a notice “This text comes from a proprietary database and cannot be displayed due to copyright restrictions.” If you have access to the relevant databases, you can track down these witnesses independently. </li> 
+
+<li> Stemming from #4, these bibliographies include only texts from the databases we are able to study computationally. Many large-scale digital archives of historical newspapers do not provide data-level access to their collections and thus we cannot study them using our methods. We suspect you would only find more witnesses of the texts here were you to search for them in additional historical newspaper archives. </li> 
+
+<li>Finally, we call these <a href="https://manifold.umn.edu/read/untitled-883630b9-c054-44e1-91db-d053a7106ecb/section/ea1f849a-bac1-4e9d-85f4-149d0083a6a4">“speculative bibliographies”</a> for a reason: we use probabilistic methods to study newspaper reprinting at a large scale. This means, however, that you will find mistakes in the clustering, such as false positives where two different texts use enough of the same phrases they were clustered together. Our favorite example of this is political speeches delivered by different politicians years apart, but which use enough of the same stock phrases that they are clustered together. If you notice trends in these kinds of false positives—particular kinds of texts that seem to be confusing our reprint detection—please let us know. Likewise, if you know that a particular text should be in our data but it is not—e.g. a text you’ve studied and know was widely reprinted, but which you cannot find at all in our data—let us know that also. This kind of feedback from other scholars helps us improve our methods moving forward. </li>
+</ol>
+
+<h3>Suggested Citation</h3>
+
+<p>One reason we share this data is, frankly, there is just so much of it. There are millions of clusters in our current dataset—far more than any one scholar could study in a lifetime. We hope other scholars across fields will find useful information here about texts, authors, or genres they care about. Please cite the Viral Texts project in any work you produce or publish using this reprinting 	data:</p>
+
+<p>Ryan Cordell and David Smith, <i>Viral Texts: Mapping Networks of Reprinting in 19th-Century Newspapers and Magazines</i> (2024), <a href="http://viraltexts.org">http://viraltexts.org</a>. </p>
+
 
 {% endblock %}
 
