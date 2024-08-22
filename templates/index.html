@@ -107,11 +107,22 @@
                         {% endfor %}
                     </div>
                 {% endfor %}
+                {% if from_ + clusters_results|length < total %}
+                <div class="col-sm-auto my-auto text-right">
+                    <form method="POST" action="{{ url_for('handle_search') }}">
+                        <input type="hidden" name="query" value="{{ query }}">
+
+                        <input type="hidden" name="from_" value="{{ from_ + clusters_results|length }}">
+                        <button type="submit" class="btn btn-primary">Next page →</button>
+                    </form>
+                </div>
+            {% endif %}
             </div>
         </div>
     {% elif request.method == 'POST' %}
         <p>No results found.</p>
     {% endif %}
+    
 
     <script>
         function sortClusterByDate(clusterId, dateType) {

@@ -109,28 +109,17 @@ def handle_search():
     from_ = request.form.get('from_', type=int, default=0)
 
     if parsed_query:
-        if '"' in parsed_query:
-            search_query = {
-                'must': {
-                    'match_phrase': {
-                        'text': parsed_query.strip('"'),
-                    }
-                }
+        search_query = {
+            "query_string": {
+                "query": parsed_query,
+                "default_field": "text",  # Specify the field you want to search within
+                "default_operator": "AND",  # Set the default operator (AND/OR)
+                "analyze_wildcard": True,  # Allow wildcard queries if expected
             }
-        else:
-            search_query = {
-                'must': {
-                        'match_phrase': {
-                        'text': parsed_query
-                    }
-
-                }
-    }
+        }
     else:
         search_query = {
-            'must': {
-                'match_all': {}
-            }
+            "match_all": {}
         }
 
     
@@ -144,13 +133,8 @@ def handle_search():
 
     results = es.search(
         body={
-            'query': {
-                'bool': {
-                    **search_query,
-                    **filters,
-                }
-            },
-            'aggs': {
+            "query": search_query,
+           'aggs': {
                 'category-agg': {
                     'terms': {
                         'field': 'topdiv.keyword',
