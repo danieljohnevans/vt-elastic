@@ -112,9 +112,9 @@ def handle_search():
         search_query = {
             "query_string": {
                 "query": parsed_query,
-                "default_field": "text",  # Specify the field you want to search within
-                "default_operator": "AND",  # Set the default operator (AND/OR)
-                "analyze_wildcard": True,  # Allow wildcard queries if expected
+                "default_field": "text",  
+                "default_operator": "AND",  
+                "analyze_wildcard": True, 
             }
         }
     else:
@@ -241,6 +241,8 @@ def handle_search():
         clustr = es.retrieve_cluster(key, query)
         dates = [document.get('date', '') for document in clustr]
 
+
+
         if dates:
             min_date = min(dates)
             max_date = max(dates)
@@ -249,6 +251,7 @@ def handle_search():
             max_date = None
 
         cluster_date_info[key] = {'min_date': min_date, 'max_date': max_date}
+    
 
     for key in clusters_results:
         cluster_data = clusters_results[key]
@@ -260,8 +263,8 @@ def handle_search():
 
     cluster_totals = {key: len(es.retrieve_cluster(key, query)) for key in clusters_results}
 
+
     # print(clusters_results)
-    # print(cluster_totals)
     
 
     return render_template('index.html', 

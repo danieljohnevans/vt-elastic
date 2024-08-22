@@ -62,6 +62,7 @@
                         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                             <a class="dropdown-item" onclick="sortClusterByDate('{{ cluster_name.replace(' ', '_') }}', 'min_date')">Min Date</a>
                             <a class="dropdown-item" onclick="sortClusterByDate('{{ cluster_name.replace(' ', '_') }}', 'max_date')">Max Date</a>
+
                         </div>
                       </div>
                     </div>
@@ -80,7 +81,7 @@
                             <a href="{{ url_for('get_cluster', cluster_id=k, search_term=query) }}">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h5 class="mb-0">{{ cluster_totals[k] }} reprints from {{ min_date }} to {{ max_date }}</h5>                             </a>
-                                    <p class="mb-0"><b>Matching Witnesses:</b> {{ doc_count }}</p>
+                                    <p class="mb-0"><b>Reprints matching search query:</b> {{ doc_count }}</p>
                              </div> 
                            
 
@@ -128,6 +129,7 @@
         function sortClusterByDate(clusterId, dateType) {
             const clusterContainer = document.querySelector(`#${clusterId}_clusters`);
             const clusters = Array.from(clusterContainer.children);
+            console.log(clusters)
 
             clusters.sort((a, b) => {
                 const dateA = new Date(a.dataset[dateType]);
