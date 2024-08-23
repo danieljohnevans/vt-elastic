@@ -62,6 +62,7 @@
                         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                             <a class="dropdown-item" onclick="sortClusterByDate('{{ cluster_name.replace(' ', '_') }}', 'min_date')">Min Date</a>
                             <a class="dropdown-item" onclick="sortClusterByDate('{{ cluster_name.replace(' ', '_') }}', 'max_date')">Max Date</a>
+                            <a class="dropdown-item" onclick="sortClusterByDocCount('{{ cluster_name.replace(' ', '_') }}')">Doc Count</a>
 
                         </div>
                       </div>
@@ -144,6 +145,19 @@
             clusterContainer.innerHTML = '';
             clusters.forEach(cluster => clusterContainer.appendChild(cluster));
         }
+        function sortClusterByDocCount(clusterId) {
+            const clusterContainer = document.querySelector(`#${clusterId}_clusters`);
+            const clusters = Array.from(clusterContainer.children);
+
+            clusters.sort((a, b) => {
+                const countA = parseInt(a.querySelector('p').innerText.split(': ')[1], 10);
+                const countB = parseInt(b.querySelector('p').innerText.split(': ')[1], 10);
+                return countB - countA; // Sort in descending order
+            });
+
+            clusterContainer.innerHTML = '';
+            clusters.forEach(cluster => clusterContainer.appendChild(cluster));
+    }
     </script>
     
 {% endblock %}
