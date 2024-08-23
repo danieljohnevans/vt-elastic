@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
-
+<div class="container" role="main">
+<div class="row">
+<div class="col-lg-8 col-md-10 mx-auto">
 <p>This database provides search and download access to the <a href="https://manifold.umn.edu/read/untitled-883630b9-c054-44e1-91db-d053a7106ecb/section/ea1f849a-bac1-4e9d-85f4-149d0083a6a4">“speculative bibliographies”</a> of reprinted nineteenth-century newspaper texts discovered through the <a href="https://viraltexts.org"><i>Viral Texts</i> project</a> at Northeastern University and the University of Illinois Urbana-Champaign. These clusters of texts have been matched using <a href="https://github.com/dasmiq/passim">Passim</a>, a tool which “implements algorithms for detecting and aligning similar passages in text.” For more about how we use text-reuse detection to study nineteenth-century newspaper reprinting, see our book, <a href="https://manifold.umn.edu/projects/going-the-rounds"><i>Going the Rounds</i></a>. The “Textual Criticism as Language Modeling” chapter describes our computational methods in detail.</p>
 
+<hr>
 
 <h3>Using this database</h3>
 
@@ -23,12 +26,16 @@
 <li>Finally, we call these <a href="https://manifold.umn.edu/read/untitled-883630b9-c054-44e1-91db-d053a7106ecb/section/ea1f849a-bac1-4e9d-85f4-149d0083a6a4">“speculative bibliographies”</a> for a reason: we use probabilistic methods to study newspaper reprinting at a large scale. This means, however, that you will find mistakes in the clustering, such as false positives where two different texts use enough of the same phrases they were clustered together. Our favorite example of this is political speeches delivered by different politicians years apart, but which use enough of the same stock phrases that they are clustered together. If you notice trends in these kinds of false positives—particular kinds of texts that seem to be confusing our reprint detection—please let us know. Likewise, if you know that a particular text should be in our data but it is not—e.g. a text you’ve studied and know was widely reprinted, but which you cannot find at all in our data—let us know that also. This kind of feedback from other scholars helps us improve our methods moving forward. </li>
 </ol>
 
+<hr>
+
 <h3>Suggested Citation</h3>
 
 <p>One reason we share this data is, frankly, there is just so much of it. There are millions of clusters in our current dataset—far more than any one scholar could study in a lifetime. We hope other scholars across fields will find useful information here about texts, authors, or genres they care about. Please cite the Viral Texts project in any work you produce or publish using this reprinting 	data:</p>
 
 <p>Ryan Cordell and David Smith, <i>Viral Texts: Mapping Networks of Reprinting in 19th-Century Newspapers and Magazines</i> (2024), <a href="https://viraltexts.org">https://viraltexts.org</a>. </p>
-
+</div>
+</div>
+</div>
 
 {% endblock %}
 
