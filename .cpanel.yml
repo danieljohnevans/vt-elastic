@@ -3,7 +3,7 @@ deployment:
   tasks:
     - export ES_PASSWORD=${ES_PASSWORD}
     - export ES_USER=${ES_USER}
-    - export DEPLOYPATH=/home/example/public_html/
+    - export DEPLOYPATH=/home/viraltex/public_html/
 
 
     - /bin/cp -R ./* $DEPLOYPATH
