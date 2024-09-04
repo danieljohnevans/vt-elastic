@@ -1,6 +1,11 @@
 ---
 deployment:
   tasks:
-  - export ES_PASSWORD=${ES_PASSWORD}
-  - export ES_USER=${ES_USER}
-  - exec gunicorn --config gunicorn_config.py app:app
+    - export ES_PASSWORD=${ES_PASSWORD}
+    - export ES_USER=${ES_USER}
+    - export DEPLOYPATH=/home/example/public_html/
+
+
+    - /bin/cp -R ./* $DEPLOYPATH
+    - cd $DEPLOYPATH
+    - gunicorn --config gunicorn_config.py app:app
