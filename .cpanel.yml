@@ -2,4 +2,4 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/viraltex/public_html/
-    - /bin/cp index.html $DEPLOYPATH
+    - /bin/cp templates/index.html $DEPLOYPATH
