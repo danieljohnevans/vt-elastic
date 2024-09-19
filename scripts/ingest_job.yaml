@@ -19,10 +19,10 @@ spec:
           - "bash"
           - "-c"
           - |
-            cd /data/viral-texts/scripts
+            cd /data/vt-elastic/scripts
             source .venv/bin/activate
             source setenv.sh
-            python -u ingest.py /data/viral-texts/worker_${JOB_COMPLETION_INDEX}
+            python -u ingest.py /data/vt-clusters-20240711/worker_${JOB_COMPLETION_INDEX}
 
       volumes:
       - name: nfs-volume
