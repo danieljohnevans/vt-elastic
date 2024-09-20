@@ -29,7 +29,7 @@ kubectl exec -it busybox-pod -- /bin/bash
 
 # Elasticsearch Index Management Script
 
-This script provides functionality to manage an Elasticsearch index named "viral-texts-test". It allows listing the current index mapping and creating a new index with predefined settings and mappings.
+This script provides functionality to manage an Elasticsearch index named "viral-texts". It allows listing the current index mapping and creating a new index with predefined settings and mappings.
 
 ## Usage
 The script can be run with two different commands:
@@ -46,7 +46,7 @@ python script_name.py create
 
 ## Features
 
-- **List Mapping**: Displays the current mapping of the "viral-texts-test" index in JSON format.
+- **List Mapping**: Displays the current mapping of the "viral-texts" index in JSON format.
 - **Create Index**:
 - Checks if the index already exists and deletes it if it does.
 - Creates a new index with predefined settings and mappings.
@@ -168,7 +168,7 @@ Replace `<directory>` with the path to the directory containing the JSON files y
    - Reads the file line by line
    - Parses each line as a JSON object
    - Adds a 'source_file' field to each object
-   - Imports the data into the "viral-texts-test" Elasticsearch index
+   - Imports the data into the "viral-texts" Elasticsearch index
    - Reports progress every 2000 records
 4. After processing, it moves the file to a "processed" subdirectory.
 

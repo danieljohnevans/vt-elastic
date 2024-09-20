@@ -4,7 +4,7 @@ from elasticsearch import exceptions
 import json
 import sys
 
-index_name = "viral-texts-test"
+index_name = "viral-texts"
 es = elastic_client()
 
 if sys.argv[1] == "list":

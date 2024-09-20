@@ -92,10 +92,10 @@ class Search:
 
     
     def search(self,  **query_args,):
-        return self.es.search(index='viral-texts-test', **query_args)
+        return self.es.search(index='viral-texts', **query_args)
     
     def retrieve_document(self, id):
-        return self.es.get(index='viral-texts-test', id=id)
+        return self.es.get(index='viral-texts', id=id)
     
     def retrieve_cluster(self, cluster_value, search_term):
 
@@ -115,10 +115,10 @@ class Search:
 
         # run query twice. first is to get size of hit_count then again w dynamically updated size
         
-        result = self.es.search(index='viral-texts-test', body=query)
+        result = self.es.search(index='viral-texts', body=query)
         hits_count = result['hits']['total']['value']
         size = hits_count
-        result = self.es.search(index='viral-texts-test', body=query, size=size)
+        result = self.es.search(index='viral-texts', body=query, size=size)
 
         #only returns first item else returns none
         if result['hits']['total']['value'] > 0:
