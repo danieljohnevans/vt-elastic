@@ -1,9 +1,3 @@
-import sys
-
-path = '/var/www/webroot/ROOT'
-if path not in sys.path:
-    sys.path.append(path)
-
 import json
 from pprint import pprint
 
@@ -23,6 +17,10 @@ class Search:
         es_host = os.getenv('ES_HOST', 'https://es.viral-texts.software.ncsa.illinois.edu')
         es_user = os.getenv('ES_USER')
         es_password = os.getenv('ES_PASSWORD')
+
+        print(f"ES_HOST: {es_host}")
+        print(f"ES_USER: {es_user}")
+        print(f"ES_PASSWORD: {es_password}")
 
         self.es = Elasticsearch(
             es_host,
