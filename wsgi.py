@@ -1,12 +1,12 @@
-import sys
-import os
-from dotenv import load_dotenv
+
 
 path = '/var/www/webroot/ROOT'
 if path not in sys.path:
     sys.path.append(path)
 
-    
+import sys
+import os
+from dotenv import load_dotenv
 from app import app  
 
 load_dotenv()
