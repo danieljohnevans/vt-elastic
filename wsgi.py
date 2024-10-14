@@ -15,7 +15,7 @@ load_dotenv()
 es_user = os.getenv("ES_USER")
 es_password = os.getenv("ES_PASSWORD")
 
-if not es_user or not password:
+if not es_user or not es_password:
     raise RuntimeError("Elasticsearch credentials (ES_USER, ES_PASSWORD) are not set in the environment variables.")
 
 
