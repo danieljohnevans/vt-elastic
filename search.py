@@ -1,4 +1,3 @@
-import json
 from pprint import pprint
 
 from dotenv import load_dotenv
@@ -6,6 +5,7 @@ from elasticsearch import Elasticsearch
 import os
 
 load_dotenv()
+
 
 
 class Search:
@@ -17,10 +17,6 @@ class Search:
         es_host = os.getenv('ES_HOST', 'https://es.viral-texts.software.ncsa.illinois.edu')
         es_user = os.getenv('ES_USER')
         es_password = os.getenv('ES_PASSWORD')
-
-        print(f"ES_HOST: {es_host}")
-        print(f"ES_USER: {es_user}")
-        print(f"ES_PASSWORD: {es_password}")
 
         self.es = Elasticsearch(
             es_host,

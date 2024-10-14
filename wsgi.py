@@ -12,10 +12,10 @@ from app import app
 load_dotenv()
 
 
-username = os.getenv("ES_USER")
-password = os.getenv("ES_PASSWORD")
+es_user = os.getenv("ES_USER")
+es_password = os.getenv("ES_PASSWORD")
 
-if not username or not password:
+if not es_user or not password:
     raise RuntimeError("Elasticsearch credentials (ES_USER, ES_PASSWORD) are not set in the environment variables.")
 
 
