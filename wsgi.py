@@ -20,7 +20,7 @@ def set_permissions(path):
 set_permissions(APP_PATH)
 
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv('/var/www/webroot/ROOT/.env')
 
 es_user = os.getenv("ES_USER")
 es_password = os.getenv("ES_PASSWORD")

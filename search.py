@@ -1,4 +1,3 @@
-
 from pprint import pprint
 
 from dotenv import load_dotenv
@@ -6,12 +5,6 @@ from elasticsearch import Elasticsearch
 import os
 
 load_dotenv()
-
-es_user = os.getenv('ES_USER')
-es_password = os.getenv('ES_PASSWORD')
-
-print(es_user)
-
 
 
 class Search:
