@@ -5,7 +5,9 @@ from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 import os
 
-load_dotenv()
+# load_dotenv()
+load_dotenv(dotenv_path='/var/www/webroot/ROOT/.env')
+
 
 
 class Search:
