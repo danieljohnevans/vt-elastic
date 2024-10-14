@@ -1,3 +1,9 @@
+import sys
+
+path = '/var/www/webroot/ROOT'
+if path not in sys.path:
+    sys.path.append(path)
+
 import json
 from pprint import pprint
 
@@ -5,9 +11,7 @@ from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 import os
 
-# load_dotenv()
-load_dotenv(dotenv_path='/var/www/webroot/ROOT/.env')
-
+load_dotenv()
 
 
 class Search:
