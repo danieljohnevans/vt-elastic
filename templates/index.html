@@ -35,14 +35,15 @@
             <div class="col-10">
                 <div class="row mb-3">
                     <div class="col-sm-auto my-auto">
-                        Showing results {{ from_ + 1 }}-{{ from_ + clusters_results|length }} out of {{ total }}.
+                        Showing results {{ from_ + 1 }}-{{ from_ + clusters_results|length }} out of {{ cluster_aggregation['Cluster'] | length }}.
+                        <p></p>
                     </div>
                     {% if from_ > 0 %}
                         <div class="col-sm-auto my-auto">
                             <a href="javascript:history.back(1)" class="btn btn-primary">← Previous page</a>
                         </div>
                     {% endif %}
-                    {% if from_ + clusters_results|length < total %}
+                    {% if from_ + clusters_results|length < cluster_aggregation['Cluster'] | length %}
                         <div class="col-sm-auto my-auto">
                             <form method="POST" action="{{ url_for('handle_search') }}">
                                 <input type="hidden" name="query" value="{{ query }}">
@@ -80,7 +81,12 @@
                             {% set doc_count = entry.count %}
                             {% set min_date = entry.min_date %}
                             {% set max_date = entry.max_date %}
-                            <div data-min_date="{{ min_date }}" data-max_date="{{ max_date }}">
+                            {% set cluster_size = cluster_aggregation['Cluster'] %}
+                            
+
+                            
+
+                            <div data-min_date="{{ min_date }}" data-max_date="{{ max_date }}" data-doc-count="{{cluster_size[k]['doc_count']}}">
                             <a href="{{ url_for('get_cluster', cluster_id=k, search_term=query) }}">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h5 class="mb-0">{{ cluster_totals[k] }} reprints from {{ min_date }} to {{ max_date }}</h5>                             </a>
@@ -111,7 +117,7 @@
                         {% endfor %}
                     </div>
                 {% endfor %}
-                {% if from_ + clusters_results|length < total %}
+                {% if from_ + clusters_results|length < cluster_aggregation['Cluster'] | length %}
                 <div class="col-sm-auto my-auto text-right">
                     <form method="POST" action="{{ url_for('handle_search') }}">
                         <input type="hidden" name="query" value="{{ query }}">
@@ -129,6 +135,7 @@
     
 
     <script>
+        
         function sortClusterByDate(clusterId, dateType) {
             const clusterContainer = document.querySelector(`#${clusterId}_clusters`);
             const clusters = Array.from(clusterContainer.children);
@@ -147,19 +154,20 @@
             clusterContainer.innerHTML = '';
             clusters.forEach(cluster => clusterContainer.appendChild(cluster));
         }
+
         function sortClusterByDocCount(clusterId) {
-            const clusterContainer = document.querySelector(`#${clusterId}_clusters`);
-            const clusters = Array.from(clusterContainer.children);
+    const clusterContainer = document.querySelector(`#${clusterId}_clusters`);
+    const clusters = Array.from(clusterContainer.children);
 
-            clusters.sort((a, b) => {
-                const countA = parseInt(a.querySelector('p').innerText.split(': ')[1], 10);
-                const countB = parseInt(b.querySelector('p').innerText.split(': ')[1], 10);
-                return countB - countA; // Sort in descending order
-            });
+    clusters.sort((a, b) => {
+        const countA = parseInt(a.getAttribute('data-doc-count'), 10);
+        const countB = parseInt(b.getAttribute('data-doc-count'), 10);
+        return countB - countA;
+    });
 
-            clusterContainer.innerHTML = '';
-            clusters.forEach(cluster => clusterContainer.appendChild(cluster));
-    }
+    clusterContainer.innerHTML = ''; // Clear the container
+    clusters.forEach(cluster => clusterContainer.appendChild(cluster)); // Append sorted clusters
+}
     </script>
     
 {% endblock %}

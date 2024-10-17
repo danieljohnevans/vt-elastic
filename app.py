@@ -150,14 +150,24 @@ def handle_search():
                 'cluster-agg': {
                     'terms': {
                         'field': 'cluster',
+                        'size': 50, 
+                        'include': {  
+                            'partition': from_ // 50, 
+                            'num_partitions': 10 
+                        }
                     }
                 },
                 'cluster-count': {
                     'terms': {
                         'field': 'cluster',
-                        'size': 1000
+                        'size': 10000
                     }
                 },
+                'total-clusters': {
+                    'cardinality': {
+                        'field': 'cluster.keyword'
+                    }
+                }
             },
             'size': 50,  
             'from': from_,  
@@ -195,7 +205,6 @@ def handle_search():
         bucket['key']: {'doc_count': bucket['doc_count']}
         for bucket in results['aggregations']['cluster-count']['buckets']
     },}
-
 
     clusters_results = {}
     for hit in results['hits']['hits']:
@@ -264,7 +273,7 @@ def handle_search():
     cluster_totals = {key: len(es.retrieve_cluster(key, query)) for key in clusters_results}
 
 
-    # print(clusters_results)
+    # print(len(cluster_aggregation['Cluster']))
     
 
     return render_template('index.html', 
@@ -275,6 +284,7 @@ def handle_search():
                         aggs=aggs,
                         clusters=clusters,
                         clusters_results=clusters_results,
+                        cluster_aggregation=cluster_aggregation,
                         cluster_totals=cluster_totals,
                         processed_clusters=processed_clusters, 
                         total_doc_count=total_doc_count)
