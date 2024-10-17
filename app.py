@@ -108,19 +108,44 @@ def handle_search():
     filters, parsed_query = extract_filters(query)
     from_ = request.form.get('from_', type=int, default=0)
 
+    search_query = {
+    "bool": {
+        "must": [],
+        "filter": []
+    }
+}
+
     if parsed_query:
-        search_query = {
+        search_query['bool']['must'].append({
             "query_string": {
                 "query": parsed_query,
                 "default_field": "text",  
                 "default_operator": "AND",  
-                "analyze_wildcard": True, 
+                "analyze_wildcard": True,
+                
             }
-        }
+        })
     else:
-        search_query = {
-            "match_all": {}
+        search_query['bool']['must'].append({"match_all": {}})
+
+    
+    if 'location' in filters:
+        search_query['bool']['filter'].append({
+        "term": {
+            "topdiv.keyword": filters['location']
         }
+    })
+
+    if 'year' in filters:
+        year = filters['year']
+        search_query['bool']['filter'].append({
+            "range": {
+                "date": {
+                    "gte": f"{year}-01-01",
+                    "lte": f"{year}-12-31"
+                }
+            }
+        })
 
     
     #use the to update size, resizing not currently working correctly
@@ -464,56 +489,29 @@ def csv_generator(data):
     csv_buffer.seek(0)
     yield csv_buffer.read()
 
-
-# @app.cli.command()
-# def reindex():
-#     """Regenerate the Elasticsearch index."""
-#     response = es.reindex()
-#     print(f'Index with {len(response["items"])} documents created '
-#           f'in {response["took"]} milliseconds.')
     
 def extract_filters(query):
-    filters = []
+    filters = {}
 
-    filter_regex = r"location:'([^']+)'"
-    m = re.search(filter_regex, query)
-    if m:
-        filters.append({
-            'term': {
-                'topdiv.keyword': {
-                    'value': m.group(1)
-                }
-            },
-        })
-        query = re.sub(filter_regex, '', query).strip()
+    location_match = re.search(r"location:'([^']*)'", query)
+    if location_match:
+        filters['location'] = location_match.group(1)
+
+    year_match = re.search(r"year:(\d{4})", query)
+    if year_match:
+        filters['year'] = year_match.group(1)
+
+    parsed_query = query
+    if 'location' in filters:
+        parsed_query = re.sub(r"location:'[^']*'", '', parsed_query)
+    if 'year' in filters:
+        parsed_query = re.sub(r"year:\d{4}", '', parsed_query)
+
+    parsed_query = parsed_query.strip()
+
+    return filters, parsed_query
         
     
-    # filter_regex = r'cluster:([^\s]+)\s*'
-    # m = re.search(filter_regex, query)
-    # if m:
-    #     filters.append({
-    #         'term': {
-    #             'cluster': {
-    #                 'value': m.group(1)
-    #             }
-    #         },
-    #     })
-    #     query = re.sub(filter_regex, '', query).strip()
-
-    filter_regex = r'year:([^\s]+)\s*'
-    m = re.search(filter_regex, query)
-    if m:
-        filters.append({
-            'range': {
-                'date': {
-                    'gte': f'{m.group(1)}||/y',
-                    'lte': f'{m.group(1)}||/y',
-                }
-            },
-        })
-        query = re.sub(filter_regex, '', query).strip()
-
-    return {'filter': filters}, query
 
 @app.route('/about')
 def about():
