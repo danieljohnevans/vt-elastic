@@ -23,30 +23,6 @@ app.jinja_env.undefined = CustomUndefined
 def index():
     return render_template('index.html')
 
-
-# this is for embedding search
-
-# @app.post('/')
-# def handle_search():
-#     query = request.form.get('query', '')
-#     filters, parsed_query = extract_filters(query)
-#     from_ = request.form.get('from_', type=int, default=0)
-
-#     results = es.search(
-#         knn={
-#             'field': 'embedding',
-#             'query_vector': es.get_embedding(parsed_query),
-#             'num_candidates': 50,
-#             'k': 10,
-#         },
-#         size=5,
-#         from_=from_
-#     )
-#     return render_template('index.html', results=results['hits']['hits'],
-#                            query=query, from_=from_,
-#                            total=results['hits']['total']['value'])
-
-
 def process_clusters_results(clusters, search_phrase):
 
     cluster_keys = [str(key) for key in clusters['Cluster'].keys()]
@@ -147,15 +123,6 @@ def handle_search():
             }
         })
 
-    
-    #use the to update size, resizing not currently working correctly
-        # result = es.search(query={
-        #     'bool': {
-        #         **search_query,
-        #         **filters,
-        #     },          
-        # })
-
     results = es.search(
         body={
             "query": search_query,
@@ -219,11 +186,7 @@ def handle_search():
         bucket['key_as_string']: bucket['doc_count']
         for bucket in results['aggregations']['year-agg']['buckets']
         if bucket['doc_count'] > 0
-    },
-    # 'Cluster': {
-    #     bucket['key']: bucket['doc_count']
-    #     for bucket in results['aggregations']['cluster-agg']['buckets']
-    # },
+    }
     }
 
     cluster_aggregation = { 'Cluster': {
