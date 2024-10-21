@@ -135,7 +135,8 @@
     
 
     <script>
-        function sortClusterByDate(clusterId, dateType) {
+
+    function sortClusterByDate(clusterId, dateType) {
             const clusterContainer = document.querySelector(`#${clusterId}_clusters`);
             const clusters = Array.from(clusterContainer.children);
             console.log(clusters)
@@ -154,7 +155,7 @@
             clusters.forEach(cluster => clusterContainer.appendChild(cluster));
         }
 
-        function sortClusterByDocCount(clusterId) {
+    function sortClusterByDocCount(clusterId) {
     const clusterContainer = document.querySelector(`#${clusterId}_clusters`);
     const clusters = Array.from(clusterContainer.children);
 
@@ -164,8 +165,8 @@
         return countB - countA;
     });
 
-    clusterContainer.innerHTML = ''; // Clear the container
-    clusters.forEach(cluster => clusterContainer.appendChild(cluster)); // Append sorted clusters
+    clusterContainer.innerHTML = ''; 
+    clusters.forEach(cluster => clusterContainer.appendChild(cluster)); 
 }
     </script>
     
