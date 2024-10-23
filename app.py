@@ -27,6 +27,8 @@ def process_clusters_results(clusters, search_phrase):
 
     cluster_keys = [str(key) for key in clusters['Cluster'].keys()]
 
+    print(cluster_keys)
+
 
 # can adjust size here
     query = {
@@ -126,10 +128,11 @@ def handle_search():
     results = es.search(
         body={
             "query": search_query,
-           'aggs': {
+            'aggs': {
                 'category-agg': {
                     'terms': {
                         'field': 'topdiv.keyword',
+                        # 'order': { "_count": "desc" }
                     }
                 },
                 'year-agg': {
@@ -137,12 +140,14 @@ def handle_search():
                         'field': 'date',
                         'calendar_interval': 'year',
                         'format': 'yyyy',
+                        # 'order': { "_count": "desc" } 
                     }
                 },
                 'cluster-agg': {
                     'terms': {
                         'field': 'cluster',
-                        'size': 50, 
+                        
+                        'size': 10, 
                         'include': {  
                             'partition': from_ // 50, 
                             'num_partitions': 10 
@@ -161,8 +166,8 @@ def handle_search():
                     }
                 }
             },
-            'size': 50,  
-            'from': from_,  
+            'size': 50, 
+            'from': from_, 
             'highlight': {
                 'fields': {
                     'text': {
@@ -194,6 +199,10 @@ def handle_search():
         for bucket in results['aggregations']['cluster-count']['buckets']
     },}
 
+    sorted_cluster = sorted(cluster_aggregation['Cluster'].items(), key=lambda x: x[1]['doc_count'], reverse=True)
+
+
+
     clusters_results = {}
     for hit in results['hits']['hits']:
         cluster = hit['_source'].get('cluster', None)
@@ -202,6 +211,7 @@ def handle_search():
             source = hit['_source'].get('source', None)
             highlight = hit['highlight']
             date = hit['_source'].get('date', None)
+            open = hit['_source'].get('open', None)
 
             if cluster not in clusters_results:
                 clusters_results[cluster] = []
@@ -210,13 +220,15 @@ def handle_search():
                 'source': source,
                 'highlight': highlight,
                 'date': date,
-                'count': cluster_aggregation['Cluster'][cluster]['doc_count']
+                'count': cluster_aggregation['Cluster'][cluster]['doc_count'],
+                'open': open
+
             })
 
-
-
+    # print(clusters_results)
 
     clusters_data = results['aggregations']['cluster-agg']['buckets']
+
 
     clusters = {
         'Cluster': {
@@ -229,16 +241,14 @@ def handle_search():
 
     total_doc_count = sum(bucket['doc_count'] for bucket in clusters['Cluster'].values())
 
-    search_phrase = query
+    # search_phrase = query
 
-    processed_clusters = process_clusters_results(clusters, search_phrase)
+    # processed_clusters = process_clusters_results(clusters, search_phrase)
 
     cluster_date_info = {}
     for key in clusters_results:
         clustr = es.retrieve_cluster(key, query)
         dates = [document.get('date', '') for document in clustr]
-
-
 
         if dates:
             min_date = min(dates)
@@ -260,6 +270,8 @@ def handle_search():
 
     cluster_totals = {key: len(es.retrieve_cluster(key, query)) for key in clusters_results}
 
+    # print(clusters_results)
+
 
     # print(len(cluster_aggregation['Cluster']))
     
@@ -273,8 +285,9 @@ def handle_search():
                         clusters=clusters,
                         clusters_results=clusters_results,
                         cluster_aggregation=cluster_aggregation,
+                        sorted_cluster=sorted_cluster,
                         cluster_totals=cluster_totals,
-                        processed_clusters=processed_clusters, 
+                        # processed_clusters=processed_clusters, 
                         total_doc_count=total_doc_count)
 
 @app.get('/document/<id>')

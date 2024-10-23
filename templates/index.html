@@ -81,12 +81,22 @@
                             {% set doc_count = entry.count %}
                             {% set min_date = entry.min_date %}
                             {% set max_date = entry.max_date %}
+                            {% set open = entry.open %}
+
+                            
                             {% set cluster_size = cluster_aggregation['Cluster'] %}
-                            
 
-                            
+                            {% set sorted_cluster = sorted_cluster %}
 
-                            <div data-min_date="{{ min_date }}" data-max_date="{{ max_date }}" data-doc-count="{{cluster_size[k]['doc_count']}}">
+                            <!-- {{k}} -->
+
+                            <!-- <ul>
+                                {% for cluster_id, cluster_data in sorted_cluster %}
+                                    <li>Cluster ID: {{ cluster_id }} - Doc Count: {{ cluster_data['doc_count'] }}</li>
+                                {% endfor %}
+                            </ul> -->
+                            
+                            <div min_date="{{ min_date }}" max_date="{{ max_date }}" data-doc-count="{{cluster_size[k]['doc_count']}}">
                             <a href="{{ url_for('get_cluster', cluster_id=k, search_term=query) }}">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h5 class="mb-0">{{ cluster_totals[k] }} reprints from {{ min_date }} to {{ max_date }}</h5>                             </a>
@@ -98,15 +108,14 @@
                                             
                                             <b>Source:</b> {{ entry.source }}
                                             <br><b>Date:</b> {{ entry.date }}
-                                            {% if entry.highlight %}
-                                            <br><b>Text:</b> {% if entry.highlight.text %}
-                                            {{ entry.highlight.text[0] | safe }}
-                                        {% else %}
-                                        All witnesses in this cluster come from a proprietary database and cannot be displayed.
+                                            {% if entry.highlight.text[0] and open == "true" %}
+                                            <br><b>Text:</b> 
+                                                {{ entry.highlight.text[0] | safe }}
+                                            {% elif entry.highlight.text[0] and open == "false" %}
+                                            <br><b>Text:</b> All witnesses in this cluster come from a proprietary database and cannot be displayed.
                                         {% endif %}
                                         </p>
 
-                                    {% endif %}
                                     {% endif %}
 
 
