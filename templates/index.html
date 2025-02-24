@@ -4,6 +4,7 @@
 <form method="POST" action="{{ url_for('handle_search') }}">
     <div class="input-group mb-3">
       <input type="text" class="form-control" name="query" id="query" placeholder="Enter your search query" value="{{ query }}" autofocus>
+      <input type="hidden" name="from_" value="0">
       <button class="btn btn-outline-secondary" type="submit">
         <i class="bi bi-search"></i>
       </button>
@@ -65,7 +66,7 @@
                         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                             <a class="dropdown-item" onclick="sortClusterByDate('{{ cluster_name.replace(' ', '_') }}', 'min_date')">Min Date</a>
                             <a class="dropdown-item" onclick="sortClusterByDate('{{ cluster_name.replace(' ', '_') }}', 'max_date')">Max Date</a>
-                            <a class="dropdown-item" onclick="sortClusterByDocCount('{{ cluster_name.replace(' ', '_') }}')">Matching Items</a>
+                            <a class="dropdown-item" onclick="sortClusterByDocCount('{{ cluster_name.replace(' ', '_') }}', 'max_date')">Matching Items</a>
 
                         </div>
                       </div>
@@ -78,7 +79,7 @@
                         
                         {% for entry in data %}
                         {% if loop.first %}
-                            {% set doc_count = entry.count %}
+                            {% set doc_count = entry.doc_count %}
                             {% set min_date = entry.min_date %}
                             {% set max_date = entry.max_date %}
                             {% set open = entry.open %}
@@ -88,9 +89,11 @@
 
                             {% set sorted_cluster = sorted_cluster %}
 
-                            <!-- {{k}} -->
+                            
 
-                            <!-- <ul>
+                            <!-- {{cluster_totals}} -->
+<!-- 
+                            <ul>
                                 {% for cluster_id, cluster_data in sorted_cluster %}
                                     <li>Cluster ID: {{ cluster_id }} - Doc Count: {{ cluster_data['doc_count'] }}</li>
                                 {% endfor %}
@@ -108,10 +111,10 @@
                                             
                                             <b>Source:</b> {{ entry.source }}
                                             <br><b>Date:</b> {{ entry.date }}
-                                            {% if entry.highlight.text[0] and open == "true" %}
+                                            {% if entry.highlight and open == "true" %}
                                             <br><b>Text:</b> 
-                                                {{ entry.highlight.text[0] | safe }}
-                                            {% elif entry.highlight.text[0] and open == "false" %}
+                                                {{ entry.highlight | safe }}
+                                            {% elif entry.highlight and open == "false" %}
                                             <br><b>Text:</b> All witnesses in this cluster come from a proprietary database and cannot be displayed.
                                         {% endif %}
                                         </p>

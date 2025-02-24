@@ -27,7 +27,7 @@ def process_clusters_results(clusters, search_phrase):
 
     cluster_keys = [str(key) for key in clusters['Cluster'].keys()]
 
-    print(cluster_keys)
+    # print(cluster_keys)
 
 
 # can adjust size here
@@ -142,18 +142,37 @@ def handle_search():
                         'format': 'yyyy',
                         # 'order': { "_count": "desc" } 
                     }
+                },'cluster-agg': {
+    'terms': {
+    'field': 'cluster',
+    'size': 50,
+    'include': {
+        'partition': (from_ // 50) % 10,  # Cycles through partitions
+        'num_partitions': 10
+    }
+},
+    
+    "aggs": {
+        "top_cluster_hits": {
+            "top_hits": {
+                "size": 1,
+                "_source": {
+                    "includes": ["source", "date", "open", "text"]
                 },
-                'cluster-agg': {
-                    'terms': {
-                        'field': 'cluster',
-                        
-                        'size': 10, 
-                        'include': {  
-                            'partition': from_ // 50, 
-                            'num_partitions': 10 
+                "highlight": {  
+                    "fields": {
+                        "text": {
+                            "pre_tags": ["<b>"],
+                            "post_tags": ["</b>"],
+                            "fragment_size": 250
                         }
                     }
-                },
+                }
+            }
+        }
+    }
+
+},
                 'cluster-count': {
                     'terms': {
                         'field': 'cluster',
@@ -201,31 +220,43 @@ def handle_search():
 
     sorted_cluster = sorted(cluster_aggregation['Cluster'].items(), key=lambda x: x[1]['doc_count'], reverse=True)
 
+    # print(sorted_cluster)
 
+
+    # print(len(cluster_aggregation['Cluster']))
+
+    unique_clusters = {hit['_source'].get('cluster', None) for hit in results['hits']['hits']}
+    # print(len(unique_clusters))
+
+    clusters_data = results['aggregations']['cluster-agg']['buckets']
+    clusters_data = clusters_data[from_:from_ + 50]
 
     clusters_results = {}
-    for hit in results['hits']['hits']:
-        cluster = hit['_source'].get('cluster', None)
-        if cluster and cluster in cluster_aggregation['Cluster']:
-            # print(f"Cluster: {cluster}, Count: {cluster_aggregation['Cluster'][cluster]['doc_count']}")
-            source = hit['_source'].get('source', None)
-            highlight = hit['highlight']
-            date = hit['_source'].get('date', None)
-            open = hit['_source'].get('open', None)
 
-            if cluster not in clusters_results:
-                clusters_results[cluster] = []
 
-            clusters_results[cluster].append({
+    for bucket in results['aggregations']['cluster-agg']['buckets']:
+        cluster = bucket['key']
+        doc_count = bucket['doc_count']
+        
+        # Get the top hit from this cluster
+        top_hits = bucket['top_cluster_hits']['hits']['hits']
+        if top_hits:
+            top_hit = top_hits[0]
+            source = top_hit['_source'].get('source', None)
+            date = top_hit['_source'].get('date', None)
+            open_status = top_hit['_source'].get('open', None)
+            highlight = top_hit.get('highlight', {}).get('text', ["No highlight available"])[0]
+
+            clusters_results[cluster] = [{
                 'source': source,
-                'highlight': highlight,
                 'date': date,
-                'count': cluster_aggregation['Cluster'][cluster]['doc_count'],
-                'open': open
+                'open': open_status,
+                'highlight': highlight,
+                'doc_count': doc_count
+            }]
 
-            })
-
-    # print(clusters_results)
+    # print("Unique clusters returned:", len(clusters_results))
+    
 
     clusters_data = results['aggregations']['cluster-agg']['buckets']
 
