@@ -82,7 +82,14 @@
                             {% set doc_count = entry.doc_count %}
                             {% set min_date = entry.min_date %}
                             {% set max_date = entry.max_date %}
-                            {% set open = entry.open %}
+                            {% set open = entry.open %}                            
+                            {% set total_cluster_size = entry.size %}
+                            {% set min_date = entry.min_date %}
+                            {% set max_date = entry.max_date %}
+
+
+
+
 
                             
                             {% set cluster_size = cluster_aggregation['Cluster'] %}
@@ -91,7 +98,6 @@
 
                             
 
-                            <!-- {{cluster_totals}} -->
 <!-- 
                             <ul>
                                 {% for cluster_id, cluster_data in sorted_cluster %}
@@ -99,10 +105,10 @@
                                 {% endfor %}
                             </ul> -->
                             
-                            <div min_date="{{ min_date }}" max_date="{{ max_date }}" data-doc-count="{{cluster_size[k]['doc_count']}}">
+                            <div data-doc-count="{{cluster_size[k]['doc_count']}}">
                             <a href="{{ url_for('get_cluster', cluster_id=k, search_term=query) }}">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">{{ cluster_totals[k] }} reprints from {{ min_date }} to {{ max_date }}</h5>                             </a>
+                                    <h5 class="mb-0">{{ total_cluster_size }} reprints from {{ min_date }} to {{ max_date }}</h5> </a>
                                     <p class="mb-0"><b>Reprints matching search query:</b> {{ doc_count }}</p>
                              </div> 
                            
@@ -147,37 +153,34 @@
     
 
     <script>
-    function test_func(cluster_aggregation) {
-        console.log(cluster_aggregation);
-    }
 
-    function sortClusterByDate(clusterId, dateType) {
-            const clusterContainer = document.querySelector(`#${clusterId}_clusters`);
-            const clusters = Array.from(clusterContainer.children);
-            console.log(clusters)
+function sortClusterByDate(clusterId, dateType) {
+    const clusterContainer = document.querySelector(`#${clusterId}_clusters`);
+    const clusters = Array.from(clusterContainer.children);
 
-            clusters.sort((a, b) => {
-                const dateA = new Date(a.dataset[dateType]);
-                const dateB = new Date(b.dataset[dateType]);
-                if (dateType === 'max_date') {
-                    return dateB - dateA;
-                } else {
-                    return dateA - dateB; 
-                }
-            });
+    clusters.sort((a, b) => {
+        const dateA = new Date(a.getAttribute(`data-${dateType}`));
+        const dateB = new Date(b.getAttribute(`data-${dateType}`));
 
-            clusterContainer.innerHTML = '';
-            clusters.forEach(cluster => clusterContainer.appendChild(cluster));
+        if (dateType === 'max_date') {
+            return dateB - dateA; 
+        } else {
+            return dateA - dateB; 
         }
+    });
 
-    function sortClusterByDocCount(clusterId) {
+    clusterContainer.innerHTML = ''; 
+    clusters.forEach(cluster => clusterContainer.appendChild(cluster));
+}
+
+function sortClusterByDocCount(clusterId) {
     const clusterContainer = document.querySelector(`#${clusterId}_clusters`);
     const clusters = Array.from(clusterContainer.children);
 
     clusters.sort((a, b) => {
         const countA = parseInt(a.getAttribute('data-doc-count'), 10);
         const countB = parseInt(b.getAttribute('data-doc-count'), 10);
-        return countB - countA;
+        return countB - countA; 
     });
 
     clusterContainer.innerHTML = ''; 

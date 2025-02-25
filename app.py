@@ -5,7 +5,7 @@ import csv
 import io
 from jinja2 import Undefined
 from pprint import pprint
-
+from datetime import datetime
 
 
 
@@ -18,17 +18,21 @@ class CustomUndefined(Undefined):
 
 app.jinja_env.undefined = CustomUndefined
 
-
 @app.get('/')
 def index():
     return render_template('index.html')
+
+def format_date(iso_date):
+    if iso_date:
+        return datetime.strptime(iso_date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d")
+    return None
 
 def process_clusters_results(clusters, search_phrase):
 
     cluster_keys = [str(key) for key in clusters['Cluster'].keys()]
 
     # print(cluster_keys)
-
+    
 
 # can adjust size here
     query = {
@@ -128,75 +132,84 @@ def handle_search():
     results = es.search(
         body={
             "query": search_query,
-            'aggs': {
-                'category-agg': {
-                    'terms': {
-                        'field': 'topdiv.keyword',
-                        # 'order': { "_count": "desc" }
+            "aggs": {
+                "category-agg": {
+                    "terms": {
+                        "field": "topdiv.keyword"
                     }
                 },
-                'year-agg': {
-                    'date_histogram': {
-                        'field': 'date',
-                        'calendar_interval': 'year',
-                        'format': 'yyyy',
-                        # 'order': { "_count": "desc" } 
+                "year-agg": {
+                    "date_histogram": {
+                        "field": "date",
+                        "calendar_interval": "year",
+                        "format": "yyyy"
                     }
-                },'cluster-agg': {
-    'terms': {
-    'field': 'cluster',
-    'size': 50,
-    'include': {
-        'partition': (from_ // 50) % 10,  # Cycles through partitions
-        'num_partitions': 10
-    }
-},
-    
-    "aggs": {
-        "top_cluster_hits": {
-            "top_hits": {
-                "size": 1,
-                "_source": {
-                    "includes": ["source", "date", "open", "text"]
                 },
-                "highlight": {  
-                    "fields": {
-                        "text": {
-                            "pre_tags": ["<b>"],
-                            "post_tags": ["</b>"],
-                            "fragment_size": 250
+                "cluster-agg": {
+                    "terms": {
+                        "field": "cluster",
+                        "size": 50,
+                        "include": {
+                            "partition": (from_ // 50) % 10,  # Cycles through partitions
+                            "num_partitions": 10
+                        }
+                    },
+                    "aggs": {
+                        "top_cluster_hits": {
+                            "top_hits": {
+                                "size": 1,
+                                "_source": {
+                                    "includes": ["source", "date", "open", "text", "size"]
+                                },
+                                "highlight": {  
+                                    "fields": {
+                                        "text": {
+                                            "pre_tags": ["<b>"],
+                                            "post_tags": ["</b>"],
+                                            "fragment_size": 250
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "min_date": {
+                            "min": {
+                                "field": "date"
+                            }
+                        },
+                        "max_date": {
+                            "max": {
+                                "field": "date"
+                            }
                         }
                     }
-                }
-            }
-        }
-    }
-
-},
-                'cluster-count': {
-                    'terms': {
-                        'field': 'cluster',
-                        'size': 10000
+                },
+                "cluster-count": {
+                    "terms": {
+                        "field": "cluster",
+                        "size": 10000
                     }
                 },
-                'total-clusters': {
-                    'cardinality': {
-                        'field': 'cluster.keyword'
+                "total-clusters": {
+                    "cardinality": {
+                        "field": "cluster.keyword"
                     }
                 }
             },
-            'size': 50, 
-            'from': from_, 
-            'highlight': {
-                'fields': {
-                    'text': {
-                        "pre_tags": ["<b>"], "post_tags": ["</b>"],
-                        'fragment_size': 250
+            "size": 50,
+            "from": from_,
+            "highlight": {
+                "fields": {
+                    "text": {
+                        "pre_tags": ["<b>"],
+                        "post_tags": ["</b>"],
+                        "fragment_size": 250
                     }
                 }
             }
         }
     )
+
 
 
 
@@ -225,7 +238,7 @@ def handle_search():
 
     # print(len(cluster_aggregation['Cluster']))
 
-    unique_clusters = {hit['_source'].get('cluster', None) for hit in results['hits']['hits']}
+    # unique_clusters = {hit['_source'].get('cluster', None) for hit in results['hits']['hits']}
     # print(len(unique_clusters))
 
     clusters_data = results['aggregations']['cluster-agg']['buckets']
@@ -242,14 +255,20 @@ def handle_search():
         top_hits = bucket['top_cluster_hits']['hits']['hits']
         if top_hits:
             top_hit = top_hits[0]
+            size = top_hit['_source'].get('size', None)
             source = top_hit['_source'].get('source', None)
             date = top_hit['_source'].get('date', None)
             open_status = top_hit['_source'].get('open', None)
             highlight = top_hit.get('highlight', {}).get('text', ["No highlight available"])[0]
+            min_date = bucket["min_date"]["value_as_string"] if "value_as_string" in bucket["min_date"] else None
+            max_date = bucket["max_date"]["value_as_string"] if "value_as_string" in bucket["max_date"] else None
 
             clusters_results[cluster] = [{
                 'source': source,
+                'size': size,
                 'date': date,
+                'min_date': format_date(min_date),
+                'max_date': format_date(max_date),
                 'open': open_status,
                 'highlight': highlight,
                 'doc_count': doc_count
@@ -276,35 +295,39 @@ def handle_search():
 
     # processed_clusters = process_clusters_results(clusters, search_phrase)
 
-    cluster_date_info = {}
-    for key in clusters_results:
-        clustr = es.retrieve_cluster(key, query)
-        dates = [document.get('date', '') for document in clustr]
+    # cluster_date_info = {}
+    # for key in clusters_results:
+    #     clustr = es.retrieve_cluster(key, query)
+    #     dates = [document.get('date', '') for document in clustr]
 
-        if dates:
-            min_date = min(dates)
-            max_date = max(dates)
-        else:
-            min_date = None
-            max_date = None
+    #     if dates:
+    #         min_date = min(dates)
+    #         max_date = max(dates)
+    #     else:
+    #         min_date = None
+    #         max_date = None
 
-        cluster_date_info[key] = {'min_date': min_date, 'max_date': max_date}
+    #     cluster_date_info[key] = {'min_date': min_date, 'max_date': max_date}
     
 
-    for key in clusters_results:
-        cluster_data = clusters_results[key]
-        date_info = cluster_date_info[key]
+    # for key in clusters_results:
+    #     cluster_data = clusters_results[key]
+    #     date_info = cluster_date_info[key]
 
-        for entry in cluster_data:
-            entry['min_date'] = date_info['min_date']
-            entry['max_date'] = date_info['max_date']
+    #     for entry in cluster_data:
+    #         entry['min_date'] = date_info['min_date']
+    #         entry['max_date'] = date_info['max_date']
 
-    cluster_totals = {key: len(es.retrieve_cluster(key, query)) for key in clusters_results}
+    #used to calculate cluster size w es.retrieve_cluster. 2/25/25 -- removed in favor of 'size' from metadata
+    # cluster_totals = {key: len(es.retrieve_cluster(key, query)) for key in clusters_results}
 
     # print(clusters_results)
 
 
     # print(len(cluster_aggregation['Cluster']))
+
+    #need to re-run sort w sorted_cluster. add in min_date, max_date and other fields requested by ryan and david
+    # print(sorted_cluster)
     
 
     return render_template('index.html', 
@@ -317,7 +340,7 @@ def handle_search():
                         clusters_results=clusters_results,
                         cluster_aggregation=cluster_aggregation,
                         sorted_cluster=sorted_cluster,
-                        cluster_totals=cluster_totals,
+                        # cluster_totals=cluster_totals,
                         # processed_clusters=processed_clusters, 
                         total_doc_count=total_doc_count)
 
