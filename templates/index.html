@@ -80,16 +80,10 @@
                         {% for entry in data %}
                         {% if loop.first %}
                             {% set doc_count = entry.doc_count %}
-                            {% set min_date = entry.min_date %}
-                            {% set max_date = entry.max_date %}
                             {% set open = entry.open %}                            
                             {% set total_cluster_size = entry.size %}
                             {% set min_date = entry.min_date %}
                             {% set max_date = entry.max_date %}
-
-
-
-
 
                             
                             {% set cluster_size = cluster_aggregation['Cluster'] %}

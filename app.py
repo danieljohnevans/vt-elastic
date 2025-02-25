@@ -130,85 +130,86 @@ def handle_search():
         })
 
     results = es.search(
-        body={
-            "query": search_query,
-            "aggs": {
-                "category-agg": {
-                    "terms": {
-                        "field": "topdiv.keyword"
+    body={
+        "query": search_query,
+        "from": from_,  # Pagination for the main query
+        "aggs": {
+            "cluster-agg": {  # Aggregation per cluster
+                "terms": {
+                    "field": "cluster",
+                    "size": 50,
+                    "include": {
+                        "partition": (from_ // 50) % 10,  # Cycles through partitions
+                        "num_partitions": 10
                     }
                 },
-                "year-agg": {
-                    "date_histogram": {
-                        "field": "date",
-                        "calendar_interval": "year",
-                        "format": "yyyy"
-                    }
-                },
-                "cluster-agg": {
-                    "terms": {
-                        "field": "cluster",
-                        "size": 50,
-                        "include": {
-                            "partition": (from_ // 50) % 10,  # Cycles through partitions
-                            "num_partitions": 10
-                        }
-                    },
-                    "aggs": {
-                        "top_cluster_hits": {
-                            "top_hits": {
-                                "size": 1,
-                                "_source": {
-                                    "includes": ["source", "date", "open", "text", "size"]
-                                },
-                                "highlight": {  
-                                    "fields": {
-                                        "text": {
-                                            "pre_tags": ["<b>"],
-                                            "post_tags": ["</b>"],
-                                            "fragment_size": 250
-                                        }
+                "aggs": {  # Sub-aggregations per cluster
+                    "top_cluster_hits": {
+                        "top_hits": {
+                            "size": 1,
+                            "_source": {
+                                "includes": ["source", "date", "open", "text", "size"]
+                            },
+                            "highlight": {
+                                "fields": {
+                                    "text": {
+                                        "pre_tags": ["<b>"],
+                                        "post_tags": ["</b>"],
+                                        "fragment_size": 250
                                     }
                                 }
                             }
-                        },
-                        "min_date": {
-                            "min": {
-                                "field": "date"
-                            }
-                        },
-                        "max_date": {
-                            "max": {
-                                "field": "date"
-                            }
                         }
-                    }
-                },
-                "cluster-count": {
-                    "terms": {
-                        "field": "cluster",
-                        "size": 10000
-                    }
-                },
-                "total-clusters": {
-                    "cardinality": {
-                        "field": "cluster.keyword"
+                    },
+                    "min_date": {
+                        "min": {
+                            "field": "date"
+                        }
+                    },
+                    "max_date": {
+                        "max": {
+                            "field": "date"
+                        }
                     }
                 }
             },
-            "size": 50,
-            "from": from_,
-            "highlight": {
-                "fields": {
-                    "text": {
-                        "pre_tags": ["<b>"],
-                        "post_tags": ["</b>"],
-                        "fragment_size": 250
-                    }
+            "category-agg": {  # Faceted aggregation for category
+                "terms": {
+                    "field": "topdiv.keyword"
+                }
+            },
+            "year-agg": {  # Faceted aggregation for year
+                "date_histogram": {
+                    "field": "date",
+                    "calendar_interval": "year",
+                    "format": "yyyy"
+                }
+            },
+            "cluster-count": {  # Count total clusters
+                "terms": {
+                    "field": "cluster",
+                    "size": 10000
+                }
+            },
+            "total-clusters": {  # Unique cluster count
+                "cardinality": {
+                    "field": "cluster.keyword"
+                }
+            }
+        },
+        "highlight": {  # Highlighting for search results
+            "fields": {
+                "text": {
+                    "pre_tags": ["<b>"],
+                    "post_tags": ["</b>"],
+                    "fragment_size": 250
                 }
             }
         }
-    )
+    }
+)
+
+
 
 
 
@@ -255,13 +256,15 @@ def handle_search():
         top_hits = bucket['top_cluster_hits']['hits']['hits']
         if top_hits:
             top_hit = top_hits[0]
+            pprint(top_hit)
             size = top_hit['_source'].get('size', None)
             source = top_hit['_source'].get('source', None)
             date = top_hit['_source'].get('date', None)
             open_status = top_hit['_source'].get('open', None)
             highlight = top_hit.get('highlight', {}).get('text', ["No highlight available"])[0]
-            min_date = bucket["min_date"]["value_as_string"] if "value_as_string" in bucket["min_date"] else None
-            max_date = bucket["max_date"]["value_as_string"] if "value_as_string" in bucket["max_date"] else None
+            min_date = bucket.get("min_date", {}).get("value_as_string") if bucket.get("min_date") else None
+            max_date = bucket.get("max_date", {}).get("value_as_string") if bucket.get("max_date") else None
+
 
             clusters_results[cluster] = [{
                 'source': source,
