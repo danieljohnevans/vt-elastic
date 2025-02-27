@@ -113,7 +113,7 @@
                                             <br><b>Date:</b> {{ entry.date }}
                                             {% if entry.highlight and open == "true" %}
                                             <br><b>Text:</b> 
-                                                {{ entry.highlight | safe }}
+                                            {{ entry.highlight.text | first | replace("\xad", "") | replace("\n", "<br>") | safe }}                                            
                                             {% elif entry.highlight and open == "false" %}
                                             <br><b>Text:</b> All witnesses in this cluster come from a proprietary database and cannot be displayed.
                                         {% endif %}
