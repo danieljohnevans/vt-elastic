@@ -53,7 +53,7 @@ def process_clusters_results(clusters, search_phrase):
                 }
             }
         },
-        "size": 10
+        "size": 50
     }
     results = es.search(body=query)
     processed_data = []
@@ -128,8 +128,6 @@ def handle_search():
             }
         })
 
-    print(search_query)
-
     results = es.search(
         body={
             "query": search_query,
@@ -152,7 +150,7 @@ def handle_search():
                     'terms': {
                         'field': 'cluster',
                         
-                        'size': 10, 
+                        'size': 100, 
                         'include': {  
                             'partition': from_ // 50, 
                             'num_partitions': 10 
@@ -162,6 +160,7 @@ def handle_search():
                 'cluster-count': {
                     'terms': {
                         'field': 'cluster',
+                        "order": { "_count": "desc" },
                         'size': 10000
                     }
                 },
@@ -171,7 +170,7 @@ def handle_search():
                     }
                 }
             },
-            'size': 50, 
+            'size': 8700, 
             'from': from_, 
             'highlight': {
                 'fields': {
@@ -203,7 +202,7 @@ def handle_search():
 
     sorted_cluster = sorted(cluster_aggregation['Cluster'].items(), key=lambda x: x[1]['doc_count'], reverse=True)
 
-
+    # print(sorted_cluster)
 
 
     # unique_clusters = {hit['_source'].get('cluster', None) for hit in results['hits']['hits']}
@@ -212,7 +211,7 @@ def handle_search():
     clusters_data = results['aggregations']['cluster-agg']['buckets']
     clusters_data = clusters_data[from_:from_ + 50]
 
-    print(aggs)
+    # print(aggs)
 
     clusters_results = {}
     for hit in results['hits']['hits']:
@@ -239,8 +238,21 @@ def handle_search():
 
             })
 
+    #sort based on cluster count
+    clusters_results = dict(
+        sorted(clusters_results.items(), key=lambda item: item[1][0]['count'], reverse=True)
+    )
+
+    sorted_clusters_list = sorted(cluster_aggregation['Cluster'].items(), key=lambda item: item[1]['doc_count'], reverse=True)
+
+    # Sort clusters by count in descending order
+    sorted_clusters_list = sorted(clusters_results.items(), key=lambda item: item[1][0]['count'], reverse=True)
+
+    # Apply slicing for pagination
+    clusters_results = dict(sorted_clusters_list[from_:from_ + 20])
+    
     # print("Unique clusters returned:", len(clusters_results))
-    print(clusters_results)
+    # print(paginated_clusters)
 
     clusters = {
         'Cluster': {

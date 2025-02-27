@@ -48,7 +48,8 @@
                             <form method="POST" action="{{ url_for('handle_search') }}">
                                 <input type="hidden" name="query" value="{{ query }}">
 
-                                <input type="hidden" name="from_" value="{{ from_ + clusters_results|length }}">
+
+                                <input type="hidden" name="from_" value="{{ from_ + 20 }}">
                                 <button type="submit" class="btn btn-primary">Next page →</button>
                             </form>
                         </div>
@@ -134,7 +135,7 @@
                     <form method="POST" action="{{ url_for('handle_search') }}">
                         <input type="hidden" name="query" value="{{ query }}">
 
-                        <input type="hidden" name="from_" value="{{ from_ + clusters_results|length }}">
+                        <input type="hidden" name="from_" value="{{ from_ + 20 }}">
                         <button type="submit" class="btn btn-primary">Next page →</button>
                     </form>
                 </div>
@@ -181,5 +182,6 @@ function sortClusterByDocCount(clusterId) {
     clusters.forEach(cluster => clusterContainer.appendChild(cluster)); 
 }
     </script>
+    
     
 {% endblock %}
