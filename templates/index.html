@@ -78,12 +78,13 @@
                         
                         {% for entry in data %}
                         {% if loop.first %}
-                            {% set doc_count = entry.doc_count %}
+                            <!-- {% set doc_count = entry.doc_count %} -->
                             {% set open = entry.open %}                            
-                            {% set total_cluster_size = entry.size %}
+                            {% set total_cluster_size = entry.doc_count %}
                             {% set min_date = entry.min_date %}
                             {% set max_date = entry.max_date %}
-                            
+                            {% set matching_doc_count = entry.count %}
+
                             {% set cluster_size = cluster_aggregation['Cluster'] %}
 
                             {% set sorted_cluster = sorted_cluster %}
@@ -102,7 +103,7 @@
                                 <div class="d-flex justify-content-between align-items-center">
 
                                     <h5 class="mb-0">{{ total_cluster_size }} reprints from {{ min_date }} to {{ max_date }}</h5> </a>
-                                    <p class="mb-0"><b>Reprints matching search query:</b> {{ total_doc_count }}</p>
+                                    <p class="mb-0"><b>Reprints matching search query:</b> {{ matching_doc_count }}</p>
                              </div> 
                            
 
