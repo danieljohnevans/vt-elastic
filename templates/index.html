@@ -64,10 +64,36 @@
                           Sort By
                         </button>
                         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                            <a class="dropdown-item" onclick="sortClusterByDate('{{ cluster_name.replace(' ', '_') }}', 'min_date')">Min Date</a>
-                            <a class="dropdown-item" onclick="sortClusterByDate('{{ cluster_name.replace(' ', '_') }}', 'max_date')">Max Date</a>
-                            <a class="dropdown-item" onclick="sortClusterByDocCount('{{ cluster_name.replace(' ', '_') }}', 'max_date')">Matching Items</a>
-
+                            <form method="POST" action="{{ url_for('handle_search') }}">
+                                <input type="hidden" name="query" value="{{ query }}">
+                                <input type="hidden" name="sort_by" value="min_year">
+                                <button type="submit" class="dropdown-item">Min Cluster Year</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('handle_search') }}">
+                                <input type="hidden" name="query" value="{{ query }}">
+                                <input type="hidden" name="sort_by" value="max_year">
+                                <button type="submit" class="dropdown-item">Max Cluster Year</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('handle_search') }}">
+                                <input type="hidden" name="query" value="{{ query }}">
+                                <input type="hidden" name="sort_by" value="desc_count">
+                                <button type="submit" class="dropdown-item">Matching Reprints (Descending)</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('handle_search') }}">
+                                <input type="hidden" name="query" value="{{ query }}">
+                                <input type="hidden" name="sort_by" value="asc_count">
+                                <button type="submit" class="dropdown-item">Matching Reprints (Ascending)</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('handle_search') }}">
+                                <input type="hidden" name="query" value="{{ query }}">
+                                <input type="hidden" name="sort_by" value="asc_cluster">
+                                <button type="submit" class="dropdown-item">Cluster Size (Ascending)</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('handle_search') }}">
+                                <input type="hidden" name="query" value="{{ query }}">
+                                <input type="hidden" name="sort_by" value="desc_cluster">
+                                <button type="submit" class="dropdown-item">Cluster Size (Descending)</button>
+                            </form>
                         </div>
                       </div>
                     </div>
@@ -147,41 +173,4 @@
     {% endif %}
     
 
-    <script>
-
-function sortClusterByDate(clusterId, dateType) {
-    const clusterContainer = document.querySelector(`#${clusterId}_clusters`);
-    const clusters = Array.from(clusterContainer.children);
-
-    clusters.sort((a, b) => {
-        const dateA = new Date(a.getAttribute(`data-${dateType}`));
-        const dateB = new Date(b.getAttribute(`data-${dateType}`));
-
-        if (dateType === 'max_date') {
-            return dateB - dateA; 
-        } else {
-            return dateA - dateB; 
-        }
-    });
-
-    clusterContainer.innerHTML = ''; 
-    clusters.forEach(cluster => clusterContainer.appendChild(cluster));
-}
-
-function sortClusterByDocCount(clusterId) {
-    const clusterContainer = document.querySelector(`#${clusterId}_clusters`);
-    const clusters = Array.from(clusterContainer.children);
-
-    clusters.sort((a, b) => {
-        const countA = parseInt(a.getAttribute('data-doc-count'), 10);
-        const countB = parseInt(b.getAttribute('data-doc-count'), 10);
-        return countB - countA; 
-    });
-
-    clusterContainer.innerHTML = ''; 
-    clusters.forEach(cluster => clusterContainer.appendChild(cluster)); 
-}
-    </script>
-    
-    
 {% endblock %}

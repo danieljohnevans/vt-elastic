@@ -22,10 +22,11 @@ app.jinja_env.undefined = CustomUndefined
 def index():
     return render_template('index.html')
 
-def format_date(iso_date):
-    if iso_date:
-        return datetime.strptime(iso_date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d")
-    return None
+def parse_date(date_str):
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return None
 
 def process_clusters_results(clusters, search_phrase):
 
@@ -223,6 +224,15 @@ def handle_search():
             date = hit['_source'].get('date', None)
             open = hit['_source'].get('open', None)
             doc_count = hit['_source'].get('size', None)
+            date_range = hit['_source'].get('dateRange', None)
+
+            if date_range:
+                try:
+                    min_year, max_year = map(int, date_range.split('/')) 
+                except ValueError:
+                    min_year, max_year = None, None 
+            else:
+                min_year, max_year = None, None  
 
 
             if cluster not in clusters_results:
@@ -234,7 +244,10 @@ def handle_search():
                 'date': date,
                 'count': cluster_aggregation['Cluster'][cluster]['doc_count'],
                 'open': open,
-                'doc_count': doc_count
+                'doc_count': doc_count,
+                'date_range': date_range,
+                'min_year': min_year,
+                'max_year': max_year
 
             })
 
@@ -243,10 +256,37 @@ def handle_search():
         sorted(clusters_results.items(), key=lambda item: item[1][0]['count'], reverse=True)
     )
 
+    # print(clusters_results)
+
     sorted_clusters_list = sorted(cluster_aggregation['Cluster'].items(), key=lambda item: item[1]['doc_count'], reverse=True)
 
-    # Sort clusters by count in descending order
+    # print(sorted_clusters_list)
+
+    # Sort clusters w info by count in descending order
     sorted_clusters_list = sorted(clusters_results.items(), key=lambda item: item[1][0]['count'], reverse=True)
+    # print(sorted_clusters_list)
+
+
+    sort_by = request.form.get("sort_by", "count")  # Get sort option from the request
+
+    if sort_by == "min_year":
+        sorted_clusters_list = sorted(
+            clusters_results.items(), 
+            key=lambda item: item[1][0]['min_year'] if item[1][0]['min_year'] is not None else float('inf')
+        )   
+    elif sort_by == "max_year":
+            sorted_clusters_list = sorted(
+                clusters_results.items(), 
+                key=lambda item: item[1][0]['max_year'] if item[1][0]['max_year'] is not None else float('inf')
+            )    
+    elif sort_by == "desc_count":
+        sorted_clusters_list = sorted(sorted_clusters_list, key=lambda item: item[1][0]['count'], reverse=True)
+    elif sort_by == "asc_count":
+        sorted_clusters_list = sorted(sorted_clusters_list, key=lambda item: item[1][0]['count'], reverse=False)
+    elif sort_by == "desc_cluster":
+        sorted_clusters_list = sorted(sorted_clusters_list, key=lambda item: item[1][0]['doc_count'], reverse=True)
+    elif sort_by == "asc_cluster":
+        sorted_clusters_list = sorted(sorted_clusters_list, key=lambda item: item[1][0]['doc_count'], reverse=False)
 
     # Apply slicing for pagination
     clusters_results = dict(sorted_clusters_list[from_:from_ + 20])
@@ -287,6 +327,8 @@ def handle_search():
         for entry in cluster_data:
             entry['min_date'] = date_info['min_date']
             entry['max_date'] = date_info['max_date']
+
+    
 
 
     total_doc_count = sum(bucket['doc_count'] for bucket in clusters['Cluster'].values())
