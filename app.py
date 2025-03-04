@@ -117,6 +117,14 @@ def handle_search():
             "topdiv.keyword": filters['location']
         }
     })
+        
+    if 'cluster' in filters:
+        year = filters['cluster']
+        search_query['bool']['filter'].append({
+            "term": {
+            "cluster": filters['cluster']
+        }
+        })
 
     if 'year' in filters:
         year = filters['year']
@@ -220,11 +228,14 @@ def handle_search():
         if cluster and cluster in cluster_aggregation['Cluster']:
             # print(f"Cluster: {cluster}, Count: {cluster_aggregation['Cluster'][cluster]['doc_count']}")
             source = hit['_source'].get('source', None)
-            highlight = hit['highlight']
             date = hit['_source'].get('date', None)
             open = hit['_source'].get('open', None)
             doc_count = hit['_source'].get('size', None)
             date_range = hit['_source'].get('dateRange', None)
+            if 'highlight' in hit:
+                highlight = hit['highlight']
+            else:
+                highlight = {}
 
             if date_range:
                 try:
@@ -536,12 +547,19 @@ def extract_filters(query):
     year_match = re.search(r"year:(\d{4})", query)
     if year_match:
         filters['year'] = int(year_match.group(1))
+    
+    
+    cluster_match = re.search(r"cluster:'(\d+)'", query)
+    if cluster_match:
+        filters['cluster'] = int(cluster_match.group(1))
 
     parsed_query = query
     if 'location' in filters:
         parsed_query = re.sub(r"location:'[^']*'", '', parsed_query)
     if 'year' in filters:
         parsed_query = re.sub(r"\s*year:\d{4}\s*", ' ', parsed_query)
+    if 'cluster' in filters:
+        parsed_query = re.sub(r"'cluster:'(\d+)", ' ', parsed_query)
 
     parsed_query = parsed_query.strip()
     parsed_query = re.sub(r'\s+(AND|OR)\s+$', '', parsed_query)
