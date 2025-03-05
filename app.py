@@ -231,6 +231,7 @@ def handle_search():
             date = hit['_source'].get('date', None)
             open = hit['_source'].get('open', None)
             doc_count = hit['_source'].get('size', None)
+            city = hit['_source'].get('city', None)
             date_range = hit['_source'].get('dateRange', None)
             if 'highlight' in hit:
                 highlight = hit['highlight']
@@ -258,7 +259,8 @@ def handle_search():
                 'doc_count': doc_count,
                 'date_range': date_range,
                 'min_year': min_year,
-                'max_year': max_year
+                'max_year': max_year,
+                'city': city
 
             })
 

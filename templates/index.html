@@ -13,26 +13,68 @@
     {% if clusters %}
         <div class="row mb-3">
             <div class="col-2 mt-2">
-                <p><a href="javascript:history.back(1)">← Back</a></p>
+    <p><a href="javascript:history.back(1)">← Back</a></p>
 
-                {% for agg in aggs %}
-                    <h6 class="mt-3">{{ agg }}</h6>
-                    {% for key, count in aggs[agg].items() %}
-                    {% if agg|lower == 'location' %}
-                    <form method="POST">
-                        <input type="hidden" name="query" value="{{ agg|lower }}:'{{ key }}' {{ query }}">
-                        <button type="submit" class="btn btn-link btn-sm"{% if aggs[agg]|length == 1 %} disabled{% endif %}>{{ key }} ({{ count }})</button>
-                    </form>
-                    {% endif %}
-                    {% if agg|lower == 'year' %}
-                    <form method="POST">
-                        <input type="hidden" name="query" value="{{ agg|lower }}:{{ key }} {{ query }}">
-                        <button type="submit" class="btn btn-link btn-sm"{% if aggs[agg]|length == 1 %} disabled{% endif %}>{{ key }} ({{ count }})</button>
-                    </form>
-                    {% endif %}
-                    {% endfor %}
-                {% endfor %}
+    <div class="accordion" id="facetAccordion">
+        {% for agg in aggs %}
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="heading-{{ agg }}">
+                    <button class="accordion-button {% if agg|lower != 'year' %}collapsed{% endif %}" 
+                            type="button" 
+                            data-bs-toggle="collapse" 
+                            data-bs-target="#collapse-{{ agg }}" 
+                            aria-expanded="false" 
+                            aria-controls="collapse-{{ agg }}">
+                        {{ agg }}
+                    </button>
+                </h2>
+                <div id="collapse-{{ agg }}" class="accordion-collapse collapse {% if agg|lower == 'year' %}show{% endif %}" 
+                     aria-labelledby="heading-{{ agg }}" data-bs-parent="#facetAccordion">
+                    <div class="accordion-body">
+                        {% if agg|lower == 'location' %}
+                            {% for key, count in aggs[agg].items() %}
+                                <form method="POST">
+                                    <input type="hidden" name="query" value="{{ agg|lower }}:'{{ key }}' {{ query }}">
+                                    <button type="submit" class="btn btn-link btn-sm"{% if aggs[agg]|length == 1 %} disabled{% endif %}>
+                                        {{ key }} ({{ count }})
+                                    </button>
+                                </form>
+                            {% endfor %}
+                        {% elif agg|lower == 'year' %}
+                            {% set decades = {} %}
+                            {% for key, count in aggs[agg].items() %}
+                                {% set decade = (key|string)[:3] ~ "0s" %}
+                                {% if decades[decade] is not defined %}
+                                    {% set _ = decades.update({decade: {'count': 0, 'years': []} }) %}
+                                {% endif %}
+                                {% set _ = decades[decade]['years'].append((key, count)) %}
+                                {% set _ = decades[decade].update({'count': decades[decade]['count'] + count}) %}
+                            {% endfor %}
+
+                            {% for decade, data in decades.items() %}
+                                <button class="btn btn-link text-start w-100" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ decade|replace(' ', '_') }}" aria-expanded="false" aria-controls="collapse-{{ decade|replace(' ', '_') }}">
+                                    {{ decade }} ({{ data['count'] }})
+                                </button>
+                                <div class="collapse" id="collapse-{{ decade|replace(' ', '_') }}">
+                                    <div class="ms-3">
+                                        {% for year, count in data['years'] %}
+                                            <form method="POST">
+                                                <input type="hidden" name="query" value="{{ agg|lower }}:{{ year }} {{ query }}">
+                                                <button type="submit" class="btn btn-link btn-sm">
+                                                    {{ year }} ({{ count }})
+                                                </button>
+                                            </form>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
             </div>
+        {% endfor %}
+    </div>
+</div>
             <div class="col-10">
                 <div class="row mb-3">
                     <div class="col-sm-auto my-auto">

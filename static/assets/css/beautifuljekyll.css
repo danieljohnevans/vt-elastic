@@ -85,6 +85,35 @@ a,.btn.btn-link.btn-sm {
   background-color: #337ab7;
 }
 
+.accordion-button {
+  color: #9FC4EC !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.accordion-button:not(.collapsed) {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.accordion-button:focus {
+  box-shadow: none !important;
+}
+
+.btn-link {
+  color: #9FC4EC !important;
+  text-decoration: none;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+.accordion-item {
+  border: none !important;
+}
+
 a:hover,
 a:focus,
 .btn.btn-link.btn-sm:hover
