@@ -211,6 +211,8 @@ def handle_search():
 
     sorted_cluster = sorted(cluster_aggregation['Cluster'].items(), key=lambda x: x[1]['doc_count'], reverse=True)
 
+    print(aggs)
+
     # print(sorted_cluster)
 
 
@@ -341,13 +343,9 @@ def handle_search():
             entry['min_date'] = date_info['min_date']
             entry['max_date'] = date_info['max_date']
 
-    
 
 
     total_doc_count = sum(bucket['doc_count'] for bucket in clusters['Cluster'].values())
-
-        # aggs and clusters are returning slightly differnt counts -- reconciling this data
-
 
     return render_template('index.html', 
                         results=results['hits']['hits'],

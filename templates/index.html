@@ -118,13 +118,13 @@
                             </form>
                             <form method="POST" action="{{ url_for('handle_search') }}">
                                 <input type="hidden" name="query" value="{{ query }}">
-                                <input type="hidden" name="sort_by" value="desc_count">
-                                <button type="submit" class="dropdown-item">Matching Reprints (Descending)</button>
+                                <input type="hidden" name="sort_by" value="asc_count">
+                                <button type="submit" class="dropdown-item">Matching Reprints (Ascending)</button>
                             </form>
                             <form method="POST" action="{{ url_for('handle_search') }}">
                                 <input type="hidden" name="query" value="{{ query }}">
-                                <input type="hidden" name="sort_by" value="asc_count">
-                                <button type="submit" class="dropdown-item">Matching Reprints (Ascending)</button>
+                                <input type="hidden" name="sort_by" value="desc_count">
+                                <button type="submit" class="dropdown-item">Matching Reprints (Descending)</button>
                             </form>
                             <form method="POST" action="{{ url_for('handle_search') }}">
                                 <input type="hidden" name="query" value="{{ query }}">
