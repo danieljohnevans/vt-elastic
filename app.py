@@ -211,11 +211,6 @@ def handle_search():
 
     sorted_cluster = sorted(cluster_aggregation['Cluster'].items(), key=lambda x: x[1]['doc_count'], reverse=True)
 
-    print(aggs)
-
-    # print(sorted_cluster)
-
-
     # unique_clusters = {hit['_source'].get('cluster', None) for hit in results['hits']['hits']}
     # print(len(unique_clusters))
 
