@@ -45,7 +45,11 @@ class Search:
                 "fields": {
                     'text': { "pre_tags" : ["<b>"], "post_tags" : ["</b>"]}
                 }
-            }
+            },
+            "sort": [
+            {"date": "asc"}, 
+            {"ref": "desc"}   
+        ]
         }
         
 
