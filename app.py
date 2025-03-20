@@ -469,7 +469,10 @@ def get_cluster(cluster_id):
         first = es.search(query=search_query)
         hits_count = first['hits']['total']['value']
         size = hits_count
-        searching_by_cluster = es.search(query=search_query, size=size)
+        searching_by_cluster = es.search(query=search_query, size=size, sort=[
+        {"date": "asc"},
+        {"ref": "desc"}
+    ])
         searching_by_cluster = searching_by_cluster['hits']
         uid = [hit['_id'] for hit in searching_by_cluster['hits']]
 
