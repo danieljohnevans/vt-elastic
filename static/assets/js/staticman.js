@@ -16,7 +16,7 @@ layout: null
     const data = $(this).serialize();
 
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", url);
+    xhr.open("GET", url);
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
     xhr.onreadystatechange = function () {

@@ -18,10 +18,6 @@ class CustomUndefined(Undefined):
 
 app.jinja_env.undefined = CustomUndefined
 
-@app.get('/')
-def index():
-    return render_template('index.html')
-
 def parse_date(date_str):
     try:
         return datetime.strptime(date_str, "%Y-%m-%d")
@@ -30,10 +26,7 @@ def parse_date(date_str):
 
 def process_clusters_results(clusters, search_phrase):
 
-    cluster_keys = [str(key) for key in clusters['Cluster'].keys()]
-
-    # print(cluster_keys)
-    
+    cluster_keys = [str(key) for key in clusters['Cluster'].keys()]    
 
 # can adjust size here
     query = {
@@ -59,12 +52,6 @@ def process_clusters_results(clusters, search_phrase):
     results = es.search(body=query)
     processed_data = []
 
-    # for cluster_name, cluster_data in clusters.items():
-    #     for key, data in cluster_data.items():
-    #         doc_count = data['doc_count']
-    #         result_found = False
-    #         result_details = {}
-
     for hit in results['hits']['hits']:
         open = hit['_source']['open']
         cluster = hit['_source']['cluster']
@@ -85,11 +72,20 @@ def process_clusters_results(clusters, search_phrase):
 
     return processed_data
 
-@app.post('/')
+@app.route('/', methods=['GET', 'POST'])
+
 def handle_search():
-    query = request.form.get("query", "")
+    if request.method == 'GET' and 'query' not in request.args:
+        return render_template('index.html', query='', raw_args={})
+    
+    data = request.args if request.method == 'GET' else request.form
+
+    query   = data.get('query', '')
+    from_   = data.get('from_', type=int) or 0
+    sort_by = data.get('sort_by', 'count')
+
     filters, parsed_query = extract_filters(query)
-    from_ = request.form.get('from_', type=int, default=0)
+
     search_query = {
     "bool": {
         "must": [],
@@ -211,9 +207,6 @@ def handle_search():
 
     sorted_cluster = sorted(cluster_aggregation['Cluster'].items(), key=lambda x: x[1]['doc_count'], reverse=True)
 
-    # unique_clusters = {hit['_source'].get('cluster', None) for hit in results['hits']['hits']}
-    # print(len(unique_clusters))
-
     clusters_data = results['aggregations']['cluster-agg']['buckets']
     clusters_data = clusters_data[from_:from_ + 50]
 
@@ -223,7 +216,6 @@ def handle_search():
     for hit in results['hits']['hits']:
         cluster = hit['_source'].get('cluster', None)
         if cluster and cluster in cluster_aggregation['Cluster']:
-            # print(f"Cluster: {cluster}, Count: {cluster_aggregation['Cluster'][cluster]['doc_count']}")
             source = hit['_source'].get('source', None)
             date = hit['_source'].get('date', None)
             open = hit['_source'].get('open', None)
@@ -275,9 +267,6 @@ def handle_search():
     # Sort clusters w info by count in descending order
     sorted_clusters_list = sorted(clusters_results.items(), key=lambda item: item[1][0]['count'], reverse=True)
     # print(sorted_clusters_list)
-
-
-    sort_by = request.form.get("sort_by", "count")  # Get sort option from the request
 
     if sort_by == "min_year":
         sorted_clusters_list = sorted(

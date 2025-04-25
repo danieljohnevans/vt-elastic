@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<form method="POST" action="{{ url_for('handle_search') }}">
+<form method="GET" action="{{ url_for('handle_search') }}">
     <div class="input-group mb-3">
       <input type="text" class="form-control" name="query" id="query" placeholder="Enter your search query" value="{{ query }}" autofocus>
       <input type="hidden" name="from_" value="0">
@@ -33,7 +33,7 @@
                     <div class="accordion-body">
                         {% if agg|lower == 'location' %}
                             {% for key, count in aggs[agg].items() %}
-                                <form method="POST">
+                                <form method="GET">
                                     <input type="hidden" name="query" value="{{ agg|lower }}:'{{ key }}' {{ query }}">
                                     <button type="submit" class="btn btn-link btn-sm"{% if aggs[agg]|length == 1 %} disabled{% endif %}>
                                         {{ key }} ({{ count }})
@@ -58,7 +58,7 @@
                                 <div class="collapse" id="collapse-{{ decade|replace(' ', '_') }}">
                                     <div class="ms-3">
                                         {% for year, count in data['years'] %}
-                                            <form method="POST">
+                                            <form method="GET">
                                                 <input type="hidden" name="query" value="{{ agg|lower }}:{{ year }} {{ query }}">
                                                 <button type="submit" class="btn btn-link btn-sm">
                                                     {{ year }} ({{ count }})
@@ -87,7 +87,7 @@
                     {% endif %}
                     {% if from_ + clusters_results|length < cluster_aggregation['Cluster'] | length %}
                         <div class="col-sm-auto my-auto">
-                            <form method="POST" action="{{ url_for('handle_search') }}">
+                            <form method="GET" action="{{ url_for('handle_search') }}">
                                 <input type="hidden" name="query" value="{{ query }}">
 
 
@@ -106,32 +106,32 @@
                           Sort By
                         </button>
                         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                            <form method="POST" action="{{ url_for('handle_search') }}">
+                            <form method="GET" action="{{ url_for('handle_search') }}">
                                 <input type="hidden" name="query" value="{{ query }}">
                                 <input type="hidden" name="sort_by" value="min_year">
                                 <button type="submit" class="dropdown-item">Min Cluster Year</button>
                             </form>
-                            <form method="POST" action="{{ url_for('handle_search') }}">
+                            <form method="GET" action="{{ url_for('handle_search') }}">
                                 <input type="hidden" name="query" value="{{ query }}">
                                 <input type="hidden" name="sort_by" value="max_year">
                                 <button type="submit" class="dropdown-item">Max Cluster Year</button>
                             </form>
-                            <form method="POST" action="{{ url_for('handle_search') }}">
+                            <form method="GET" action="{{ url_for('handle_search') }}">
                                 <input type="hidden" name="query" value="{{ query }}">
                                 <input type="hidden" name="sort_by" value="asc_count">
                                 <button type="submit" class="dropdown-item">Matching Reprints (Ascending)</button>
                             </form>
-                            <form method="POST" action="{{ url_for('handle_search') }}">
+                            <form method="GET" action="{{ url_for('handle_search') }}">
                                 <input type="hidden" name="query" value="{{ query }}">
                                 <input type="hidden" name="sort_by" value="desc_count">
                                 <button type="submit" class="dropdown-item">Matching Reprints (Descending)</button>
                             </form>
-                            <form method="POST" action="{{ url_for('handle_search') }}">
+                            <form method="GET" action="{{ url_for('handle_search') }}">
                                 <input type="hidden" name="query" value="{{ query }}">
                                 <input type="hidden" name="sort_by" value="asc_cluster">
                                 <button type="submit" class="dropdown-item">Cluster Size (Ascending)</button>
                             </form>
-                            <form method="POST" action="{{ url_for('handle_search') }}">
+                            <form method="GET" action="{{ url_for('handle_search') }}">
                                 <input type="hidden" name="query" value="{{ query }}">
                                 <input type="hidden" name="sort_by" value="desc_cluster">
                                 <button type="submit" class="dropdown-item">Cluster Size (Descending)</button>
@@ -200,7 +200,7 @@
                 {% endfor %}
                 {% if from_ + clusters_results|length < cluster_aggregation['Cluster'] | length %}
                 <div class="col-sm-auto my-auto text-right">
-                    <form method="POST" action="{{ url_for('handle_search') }}">
+                    <form method="GET" action="{{ url_for('handle_search') }}">
                         <input type="hidden" name="query" value="{{ query }}">
 
                         <input type="hidden" name="from_" value="{{ from_ + 20 }}">
