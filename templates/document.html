@@ -57,7 +57,6 @@
 
         {% endif %}
 
-        <script src="https://unpkg.com/mirador@latest/dist/mirador.min.js"></script>
 
 
         <script type="text/javascript">
@@ -109,6 +108,8 @@
                         x: boxToZoom.x + boxToZoom.width / 2,
                         y: boxToZoom.y + boxToZoom.height / 2
                     };
+
+                    console.log(windowId)
         
                     const action = Mirador.actions.updateViewport(windowId, {
                         x: zoomCenter.x,
