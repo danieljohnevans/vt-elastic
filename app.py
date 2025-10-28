@@ -1,11 +1,13 @@
 import re
-from flask import Flask, render_template, request, Response, redirect, url_for, jsonify
+from flask import Flask, render_template, request, Response, redirect, url_for, jsonify, make_response
+
 from search import Search
 import csv
 import io
 from jinja2 import Undefined
 from pprint import pprint
 from datetime import datetime
+from functools import lru_cache
 
 
 
@@ -416,6 +418,7 @@ def get_document(id):
         # print("The URL format is not recognized.")
         ca_images = None
 
+    
 
     title = document['_source']['source']
     paragraphs = document['_source']['text'].split('\n')
@@ -424,7 +427,9 @@ def get_document(id):
     open=document['_source']['open']
     manifest_id=document['_source']['id']
 
-    return render_template('document.html', title=title, paragraphs=paragraphs, images=images, url=url, coverage=coverage, date=date, open=open, search_term=search_term, corpus=corpus,manifest_id=manifest_id,canvas_index=canvas_index, ca_image=ca_images,series=series,ed=ed,pp=pp)
+    return render_template('document.html', title=title, paragraphs=paragraphs, images=images, url=url, coverage=coverage, date=date, open=open, search_term=search_term, corpus=corpus,manifest_id=manifest_id,canvas_index=canvas_index, ca_image=ca_images,series=series,ed=ed,pp=pp,doc_id=id)
+
+
 
 @app.get('/cluster/<cluster_id>')
 def get_cluster(cluster_id):
@@ -552,6 +557,169 @@ def extract_filters(query):
     parsed_query = re.sub(r'\s+(AND|OR)\s+$', '', parsed_query)
 
     return filters, parsed_query
+
+import re, requests
+from flask import jsonify, url_for, abort
+
+def _parse_pct_from_page_image(url: str):
+    m = re.search(r"/pct:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/", url or "")
+    if not m:
+        return None
+    return dict(x=float(m.group(1)), y=float(m.group(2)),
+                w=float(m.group(3)), h=float(m.group(4)))
+
+
+
+def _ia_canvas_id_from_manifest(manifest_id: str, seq: int):
+    url = f"https://iiif.archive.org/iiif/3/{manifest_id}/manifest.json"
+    r = requests.get(url, timeout=10)
+    r.raise_for_status()
+    data = r.json()
+    items = data.get("items", [])
+    if seq < 0 or seq >= len(items):
+        raise IndexError(f"Canvas index {seq} out of range (0..{len(items)-1})")
+    canvas = items[seq]
+    return canvas["id"], canvas.get("width"), canvas.get("height")
+
+@lru_cache(maxsize=512)
+def _ia_canvas_id_from_manifest_cached(manifest_id: str, seq: int):
+    return _ia_canvas_id_from_manifest(manifest_id, seq)
+
+
+def _loc_canvas_id(series: str, date_str: str, ed: str, seq: int) -> str:
+    """
+    Fetch the LOC v2 manifest and return the @id for the (seq-1)th canvas.
+    """
+    if not (series and date_str and ed):
+        raise ValueError("Missing LOC fields (series/date/ed)")
+    # Your template builds a similar URL (make sure 'series' already includes '/item/lccn/...'):
+    url = f"https://www.loc.gov/item{series}/{date_str}/ed-{ed}/manifest.json".replace("/lccn", "")
+    r = requests.get(url, timeout=10)
+    r.raise_for_status()
+    data = r.json()
+    canvases = (data.get('sequences', [{}])[0].get('canvases', []))
+    if not canvases or seq-1 < 0 or seq-1 >= len(canvases):
+        raise IndexError("Canvas index out of range for LOC manifest")
+    return canvases[seq-1].get('@id')
+
+def make_annotation(canvas_id, uniq, coords_px, label="Annotation", cluster=None, href=None):
+    x = int(coords_px['x']); y = int(coords_px['y'])
+    w = int(coords_px['w']); h = int(coords_px['h'])
+
+    body = [{
+        "type": "TextualBody",
+        "format": "text/plain",
+        "value": label
+    }]
+    if cluster is not None:
+        body.append({
+            "type": "TextualBody",
+            "format": "text/plain",
+            "value": f"Cluster {cluster}"
+        })
+    if href:
+        body.append({
+            "type": "TextualBody",
+            "format": "text/html",
+            "value": f"<a href='{href}' target='_blank' rel='noopener'>Open this occurrence</a>"
+        })
+
+    return {
+        "type": "Annotation",
+        "id": f"{canvas_id}#anno-{uniq}",
+        "motivation": "commenting",
+        "body": body,
+        "target": f"{canvas_id}#xywh={x},{y},{w},{h}",
+    }
+
+
+@app.get("/annotations/<doc_id>.json")
+def annotations_for_doc(doc_id):
+    document = es.retrieve_document(doc_id)
+    if not document or '_source' not in document:
+        abort(404)
+
+    src         = document['_source']
+    corpus      = src.get('corpus')
+    manifest_id = src.get('id')
+    seq         = int(src.get('p1seq') or 0)
+    page_image  = src.get('page_image')
+    page_p1iiif = src.get('p1iiif')
+    cluster_cur = src.get('cluster')
+    cluster_url = f"https://clusters.viraltexts.org/cluster/{cluster_cur}"
+
+
+    try:
+        if corpus == 'ia':
+            current_canvas_id, canvas_w, canvas_h = _ia_canvas_id_from_manifest(manifest_id, seq)
+        elif corpus == 'ca':
+            current_canvas_id = _loc_canvas_id(src.get('series'), src.get('date'), src.get('ed'), seq)
+            canvas_w = canvas_h = None
+        else:
+            abort(400, "Unsupported corpus for annotations")
+    except Exception as e:
+        abort(400, f"Failed to resolve canvasId: {e}")
+
+    items = []
+
+    page_boxes = es.get_boxes_for_manifest_page(manifest_id, seq=seq)
+
+    if not page_boxes and page_image:
+        # fallback to the pct-based box if no search results
+        pct = _parse_pct_from_page_image(page_image)
+        if pct and canvas_w and canvas_h:
+            items.append(make_annotation(
+                current_canvas_id, f"pct-{seq}",
+                {
+                    'x': (pct['x'] / 100.0) * canvas_w,
+                    'y': (pct['y'] / 100.0) * canvas_h,
+                    'w': (pct['w'] / 100.0) * canvas_w,
+                    'h': (pct['h'] / 100.0) * canvas_h,
+                },
+                label=src.get('source'),
+                cluster=cluster_cur,
+                href=cluster_url
+            ))
+
+    for i, box in enumerate(page_boxes, start=1):
+        try:
+            src_canvas_id, _, _ = _ia_canvas_id_from_manifest_cached(box["manifest_id"], box["seq"])
+        except Exception:
+            src_canvas_id = None
+
+        cluster_url = url_for('get_cluster', cluster_id=box["cluster"], _external=True)
+
+
+        if box.get("es_id"):
+            cluster_url = f"{cluster_url}?focus={box['es_id']}"
+
+        items.append(make_annotation(
+            current_canvas_id,
+            f"box-{seq}-{i}",
+            {"x": box["x"], "y": box["y"], "w": box["w"], "h": box["h"]},
+            label=box["label"] or "Citation",
+            cluster=box["cluster"],
+            href=cluster_url
+        ))
+
+    anno_page = {
+        "@context": "http://iiif.io/api/presentation/3/context.json",
+        "id": url_for("annotations_for_doc", doc_id=doc_id, _external=True),
+        "type": "AnnotationPage",
+        "items": items,
+    }
+    resp = make_response(jsonify(anno_page))
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Cache-Control"] = "public, max-age=300"
+    return resp
+
+
+
+@app.after_request
+def add_cors_headers(resp):
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
+
         
     
 

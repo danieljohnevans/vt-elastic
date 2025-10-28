@@ -57,103 +57,120 @@
 
         {% endif %}
 
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", async function () {
+  const ia_manifestId = `https://iiif.archive.org/iiif/3/{{ manifest_id }}/manifest.json`;
+  const rawCanvasIndex = {{ canvas_index }};
+  const canvasIndex = Math.max(0, (rawCanvasIndex || 1)); // ensure 0-based
+
+  const noSupplementing = (annotation) => {
+  return annotation.motivation !== 'supplementing';
+};
 
 
-        <script type="text/javascript">
-            document.addEventListener("DOMContentLoaded", function() {
-                const ia_manifestId = `https://iiif.archive.org/iiif/3/{{ manifest_id }}/manifest.json`;
-                const loc_manifestI = `https://www.loc.gov/item{{series}}/{{date}}/ed-{{ed}}/manifest.json`;
-                const loc_manifestId = loc_manifestI.replace('/lccn', '');
+  function setupMirador(manifestId, viewerId, itemCanvasIndex) {
+    const instance = Mirador.viewer({
+      id: viewerId,
+      windows: [{ manifestId, canvasIndex: itemCanvasIndex, view: 'single' }],
+      window: {
+        defaultView: 'single',
+        highlightAllAnnotations: false, 
+        forceDrawAnnotations: true,
+        defaultSideBarPanel: 'annotations',
+        sideBarOpen: true,
+        canvasAnnotations: true,
+        sideBarOpenByDefault: true,
         
-                const canvasIndex = {{ canvas_index }};
-                const pageImageUrl = "{{ images }}";
-        
-                function setupMirador(manifestId, canvasDimensions, viewerId, item_canvasIndex) {
-                    const miradorInstance = Mirador.viewer({
-                        id: viewerId,
-                        windows: [
-                            {
-                                manifestId: manifestId,
-                                canvasIndex: item_canvasIndex,
-                                view: 'single',
-                            },
-                            // {
-    //   manifestId: "https://scta.info/iiif/plaoulcommentary/sorb/manifest", //add a manifest here that you want to miror to display onload
-    //   canvasId: "http://scta.info/iiif/sorb/canvas/S2r" //add a canvas here within the above manifest that you want mirador to open on load
-    // },
-                        ],
-                        window: {
-                            defaultView: 'single',
-                            highlightAllAnnotations: false,
-                            forceDrawAnnotations: true,
-                        }
-                    });
-        
-                    console.log(manifestId);
-        
-                    const windowId = Object.keys(miradorInstance.store.getState().windows)[0];
-        
-                    const percentagesPart = pageImageUrl.match(/pct:([^/]+)/)[1];
-                    const [x, y, width, height] = percentagesPart.split(',').map(parseFloat);
-        
-                    const percentages_boxToZoom = { x: x, y: y, width: width, height: height };
-                    const boxToZoom = {
-                        x: (percentages_boxToZoom.x / 100) * canvasDimensions.width,
-                        y: (percentages_boxToZoom.y / 100) * canvasDimensions.height,
-                        width: (percentages_boxToZoom.width / 100) * canvasDimensions.width,
-                        height: (percentages_boxToZoom.height / 100) * canvasDimensions.height
-                    };
-        
-                    const zoomCenter = {
-                        x: boxToZoom.x + boxToZoom.width / 2,
-                        y: boxToZoom.y + boxToZoom.height / 2
-                    };
 
-                    console.log(windowId)
-        
-                    const action = Mirador.actions.updateViewport(windowId, {
-                        x: zoomCenter.x,
-                        y: zoomCenter.y,
-                        zoom: 0.5 / boxToZoom.width
-                    });
-        
-                    setTimeout(() => {
-                        miradorInstance.store.dispatch(action);
-                    }, 2000);
-                }
-        
-                fetch(ia_manifestId)
-                    .then(response => response.json())
-                    .then(manifest => {
-                        console.log('Internet Archive Manifest:', manifest);
-        
-                        const page = manifest.items[canvasIndex];
-                        const canvasDimensions = { width: page.width, height: page.height };
-        
-                        setupMirador(ia_manifestId, canvasDimensions, 'ia-mirador', canvasIndex);
-                    })
-                    .catch(error => {
-                        console.error('Error fetching IA manifest:', error);
-                    });
-        
-                fetch(loc_manifestId)
-                    .then(response => response.json())
-                    .then(locManifest => {
-                        console.log('Library of Congress Manifest:', locManifest);
-        
-                        const locPage = locManifest.sequences[0].canvases[canvasIndex - 1];
-                        const locCanvasDimensions = { width: locPage.width, height: locPage.height };
-                        console.log(locCanvasDimensions);
-        
-                        const loc_canvas_index = canvasIndex - 1;
-        
-                        setupMirador(loc_manifestId, locCanvasDimensions, 'ca-mirador', loc_canvas_index);
-                    })
-                    .catch(error => {
-                        console.error('Error fetching LOC manifest:', error);
-                    });
-            });
-        </script>
+      },
+      workspaceControlPanel: { enabled: false },
+  annotation: {
+    filter: noSupplementing
+  }
+    });
+    console.log("instance", instance)
+    return new Promise((resolve) => {
+      const poll = () => {
+        const ids = Object.keys(instance.store.getState()?.windows || {});
+        if (ids.length) return resolve({ instance, windowId: ids[0] });
+        setTimeout(poll, 50);
+      };
+      poll();
+    });
+  }
+
+  
+
+  try {
+    const r = await fetch(ia_manifestId);
+    const manifest = await r.json();
+    const page = manifest.items?.[canvasIndex];
+    if (!page) return;
+
+    const dims = { width: page.width, height: page.height };
+
+    const { instance, windowId } = await setupMirador(ia_manifestId, 'ia-mirador', canvasIndex);
+
+    const state = instance.store.getState();
+    const currentCanvasId = state.windows?.[windowId]?.canvasId || page.id;
+
+    // console.log("🖼️ Mirador's canvasId:", currentCanvasId);
+
+
+// build the *server* URL, passing the canvas id as a query param
+const clustersCsv = /* build your list or derive from UI */ '';
+const annoUrl = `/annotations/{{ doc_id }}.json?canvasId=${encodeURIComponent(currentCanvasId)}${clustersCsv ? `&clusters=${clustersCsv}` : ''}`;
+  // const annoBase = `/annotations/{{ doc_id }}.json`;
+  // console.log(annoBase)
+
+    // console.log("canvasid", currentCanvasId)
+
+    fetch(annoUrl)
+  .then(response => {
+    if (!response.ok) {
+      throw new Error("Network response was not ok " + response.statusText);
+    }
+    return response.json();
+  })
+
+
+    // timeout gives mirador time to load before loading annotaitons
+    setTimeout(() => {
+    instance.store.dispatch(Mirador.actions.requestAnnotation(currentCanvasId, annoUrl));
+    }, 300);
+
+    const m = ("{{ images }}".match(/\/pct:([\d.]+),([\d.]+),([\d.]+),([\d.]+)\//) || []);
+    if (m.length === 5) {
+      const pct = { x:+m[1], y:+m[2], w:+m[3], h:+m[4] };
+      const px  = {
+        x: (pct.x/100)*dims.width,
+        y: (pct.y/100)*dims.height,
+        w: (pct.w/100)*dims.width,
+        h: (pct.h/100)*dims.height,
+      };
+      const center = { x: px.x + px.w/2, y: px.y + px.h/2 };
+      const action = Mirador.actions.updateViewport(windowId, { x: center.x, y: center.y, zoom: 0.5/px.w });
+      setTimeout(() => instance.store.dispatch(action), 400);
+    }
+  } catch (e) {
+    console.error('[M3] IA error:', e);
+  }
+
+  
+});
+</script>
+
+
+<style>
+  /* Make all annotation rectangles stand out a bit more */
+  [data-annotation-id] rect {
+  stroke: rgba(255,0,0,0.9) !important;
+  stroke-width: 3 !important;
+  fill: rgba(255,0,0,0.10) !important;
+}
+</style>
+
+
     </div>
 {% endblock %}
 

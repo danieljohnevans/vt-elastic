@@ -29,6 +29,42 @@ class Search:
     
     def retrieve_document(self, id):
         return self.es.get(index='viral-texts', id=id)
+    
+    def get_boxes_for_manifest_page(self, manifest_id: str, seq: int | None = None, size: int = 5000):
+        """
+        Return all bounding boxes for records whose p1iiif contains the given manifest_id.
+        If seq is provided, restrict to that page (p1seq).
+        """
+        must = [
+            {"wildcard": {"url.keyword": f"*{manifest_id}*"}},
+        ]
+        if seq is not None:
+            must.append({"term": {"p1seq": seq}})
+
+        body = {
+            "query": {"bool": {"must": must}},
+            "_source": ["id", "p1seq", "p1x", "p1y", "p1w", "p1h", "cluster", "source"],
+            "size": size,
+            "sort": [
+                {"date": "asc"},
+                {"ref": "desc"}
+            ]
+        }
+        resp = self.search(body=body)
+        out = []
+        for hit in resp["hits"]["hits"]:
+            s = hit["_source"]
+            out.append({
+                "manifest_id": s.get("id"),
+                "seq":        int(s.get("p1seq") or 0),
+                "cluster":    s.get("cluster"),
+                "label":      s.get("source") or f"Cluster {s.get('cluster')}",
+                "x":          s.get("p1x"),
+                "y":          s.get("p1y"),
+                "w":          s.get("p1w"),
+                "h":          s.get("p1h"),
+            })
+        return out
 
     
 
