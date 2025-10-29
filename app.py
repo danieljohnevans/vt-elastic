@@ -581,23 +581,18 @@ def _ia_canvas_id_from_manifest(manifest_id: str, seq: int):
     canvas = items[seq]
     return canvas["id"], canvas.get("width"), canvas.get("height")
 
-@lru_cache(maxsize=512)
-def _ia_canvas_id_from_manifest_cached(manifest_id: str, seq: int):
-    return _ia_canvas_id_from_manifest(manifest_id, seq)
-
 
 def _loc_canvas_id(series: str, date_str: str, ed: str, seq: int) -> str:
-    """
-    Fetch the LOC v2 manifest and return the @id for the (seq-1)th canvas.
-    """
     if not (series and date_str and ed):
-        raise ValueError("Missing LOC fields (series/date/ed)")
-    # Your template builds a similar URL (make sure 'series' already includes '/item/lccn/...'):
+        raise ValueError(f"Missing LOC fields (series={series}, date={date_str}, ed={ed})")
+
+    series = series.replace("/tid/", "/lccn/") if "/tid/" in series else series
+
     url = f"https://www.loc.gov/item{series}/{date_str}/ed-{ed}/manifest.json".replace("/lccn", "")
     r = requests.get(url, timeout=10)
     r.raise_for_status()
     data = r.json()
-    canvases = (data.get('sequences', [{}])[0].get('canvases', []))
+    canvases = data.get('sequences', [{}])[0].get('canvases', [])
     if not canvases or seq-1 < 0 or seq-1 >= len(canvases):
         raise IndexError("Canvas index out of range for LOC manifest")
     return canvases[seq-1].get('@id')
@@ -609,19 +604,16 @@ def make_annotation(canvas_id, uniq, coords_px, label="Annotation", cluster=None
     body = [{
         "type": "TextualBody",
         "format": "text/plain",
-        "value": label
+        "value": f"From {label} |"
     }]
+
     if cluster is not None:
-        body.append({
-            "type": "TextualBody",
-            "format": "text/plain",
-            "value": f"Cluster {cluster}"
-        })
-    if href:
+        cluster_id = cluster.get("id")
+        cluster_count = cluster.get("count", "?")
         body.append({
             "type": "TextualBody",
             "format": "text/html",
-            "value": f"<a href='{href}' target='_blank' rel='noopener'>Open this occurrence</a>"
+            "value": f"<a href='{href}' target='_blank' rel='noopener'>Cluster {cluster_id} </a>| ({cluster_count} items)"
         })
 
     return {
@@ -682,12 +674,12 @@ def annotations_for_doc(doc_id):
             ))
 
     for i, box in enumerate(page_boxes, start=1):
-        try:
-            src_canvas_id, _, _ = _ia_canvas_id_from_manifest_cached(box["manifest_id"], box["seq"])
-        except Exception:
-            src_canvas_id = None
 
-        cluster_url = url_for('get_cluster', cluster_id=box["cluster"], _external=True)
+        cluster_id = box["cluster"]
+        cluster_count = es.get_cluster_count(cluster_id)
+
+
+        cluster_url = url_for('get_cluster', cluster_id=cluster_id, _external=True)
 
 
         if box.get("es_id"):
@@ -698,7 +690,7 @@ def annotations_for_doc(doc_id):
             f"box-{seq}-{i}",
             {"x": box["x"], "y": box["y"], "w": box["w"], "h": box["h"]},
             label=box["label"] or "Citation",
-            cluster=box["cluster"],
+            cluster={"id": cluster_id, "count": cluster_count},
             href=cluster_url
         ))
 

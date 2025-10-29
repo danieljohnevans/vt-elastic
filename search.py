@@ -30,6 +30,18 @@ class Search:
     def retrieve_document(self, id):
         return self.es.get(index='viral-texts', id=id)
     
+    def get_cluster_count(self, cluster_id: int) -> int:
+        """
+        Return the number of documents belonging to a given cluster.
+        """
+        body = {
+            "query": {"term": {"cluster": cluster_id}},
+            "size": 0  # we only need the count
+        }
+        resp = self.search(body=body)
+        return resp["hits"]["total"]["value"]
+        
+    
     def get_boxes_for_manifest_page(self, manifest_id: str, seq: int | None = None, size: int = 5000):
         """
         Return all bounding boxes for records whose p1iiif contains the given manifest_id.
@@ -66,7 +78,6 @@ class Search:
             })
         return out
 
-    
 
     #no longer necessary. pulling data size data from metadata and reprints from aggs 2/25. keep in for a few cycles
     def retrieve_cluster(self, cluster_value, search_term):
@@ -87,7 +98,8 @@ class Search:
             {"ref": "desc"}   
         ]
         }
-        
+
+
 
     #     # run query twice. first is to get size of hit_count then again w dynamically updated size
         
