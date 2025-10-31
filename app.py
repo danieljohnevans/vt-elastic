@@ -637,7 +637,7 @@ def _loc_canvas_id_with_dims(series: str, date_str: str, ed: str, seq: int):
     items = data.get("items")
     if items and isinstance(items, list):
         canvases = items
-        
+
     elif "sequences" in data and data["sequences"]:
         canvases = data["sequences"][0].get("canvases", [])
     else:
@@ -734,8 +734,18 @@ def annotations_for_doc(doc_id):
     if requested_canvas_id:
         current_canvas_id = requested_canvas_id
 
+    if corpus.startswith(('ca', 'acdc')):
+        p1iiif = src.get('p1iiif') or src.get('url') or ''
+        manifest_prefix = p1iiif.rsplit(':', 1)[0] 
+    else:
+        manifest_prefix = manifest_id
+
+
     items = []
-    page_boxes = es.get_boxes_for_manifest_page(manifest_id, seq=seq)
+
+    page_boxes = es.get_boxes_for_manifest_page(manifest_prefix, seq=seq)
+
+    print(page_boxes)
 
     if not page_boxes and page_image:
         pct = _parse_pct_from_page_image(page_image)
@@ -785,9 +795,7 @@ def annotations_for_doc(doc_id):
 @app.after_request
 def add_cors_headers(resp):
     resp.headers["Access-Control-Allow-Origin"] = "*"
-    return resp
-
-        
+    return resp    
     
 
 @app.route('/about')

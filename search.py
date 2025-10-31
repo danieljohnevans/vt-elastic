@@ -48,7 +48,15 @@ class Search:
         If seq is provided, restrict to that page (p1seq).
         """
         must = [
-            {"wildcard": {"url.keyword": f"*{manifest_id}*"}},
+            {
+                "bool": {
+                    "should": [
+                        {"wildcard": {"p1iiif.keyword": f"*{manifest_id}*"}},
+                        {"wildcard": {"url.keyword":   f"*{manifest_id}*"}},
+                    ],
+                    "minimum_should_match": 1
+                }
+            }
         ]
         if seq is not None:
             must.append({"term": {"p1seq": seq}})
