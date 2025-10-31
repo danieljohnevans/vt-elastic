@@ -21,7 +21,7 @@
                 {% endif %}
             </b>
         </p>    
-        {% if open == "true" and (corpus != "ia" and corpus != "ca") %}
+        {% if open == "true" and (not corpus.startswith('ia') and not corpus.startswith(('ca', 'acdc'))) %}
         <div class="col-md-6">
                 {% for paragraph in paragraphs %}
                     {% set highlighted_paragraph = paragraph|replace(search_term, '<strong>' + search_term + '</strong>')|safe %}
@@ -46,26 +46,51 @@
                 {% endif %}
             </div>
         
-        {% elif corpus == "ia" %}
-        <div id="ia-mirador"></div>
+        {% elif corpus.startswith('ia') %}
+  <div id="ia-mirador"></div>
 
-        {% elif corpus == "ca" %}
+{% elif corpus.startswith(('ca', 'acdc')) %}
+  <div id="ca-mirador"></div>
 
-        <div id="ca-mirador"></div>
-
-
-
-        {% endif %}
+{% endif %}
 
 <script type="text/javascript">
 document.addEventListener("DOMContentLoaded", async function () {
-  const ia_manifestId = `https://iiif.archive.org/iiif/3/{{ manifest_id }}/manifest.json`;
-  const rawCanvasIndex = {{ canvas_index }};
-  const canvasIndex = Math.max(0, (rawCanvasIndex || 1)); // ensure 0-based
+  // server-passed bits
+  const corpus = "{{ corpus }}";
+  const rawCanvasIndex = {{ canvas_index if canvas_index is not none else 0 }};
+  // Your ES "p1seq" is effectively 0-based, but we still guard here:
+  const canvasIndex = Math.max(0, (rawCanvasIndex || 0));
 
-  const noSupplementing = (annotation) => {
-  return annotation.motivation !== 'supplementing';
-};
+  // Choose manifest and viewer holder
+  const viewerId =
+  corpus && corpus.startsWith(("ca", "acdc")) ? "ca-mirador" :
+  corpus === "ia" ? "ia-mirador" : null;
+
+if (!viewerId) return;
+
+const mountEl = document.getElementById(viewerId);
+if (!mountEl) {
+  console.error("Missing viewer container:", viewerId, "corpus:", corpus);
+  return;
+}
+
+  // build manifest URL per corpus
+  const iaManifestUrl = `https://iiif.archive.org/iiif/3/{{ manifest_id }}/manifest.json`;
+
+  // LOC (Chronicling America) and acdc. might need others.
+  const locManifestRaw = `{{ loc_manifest_url or '' }}`;
+  const locManifestUrl = locManifestRaw
+    ? `/loc-proxy?url=${encodeURIComponent(locManifestRaw)}`
+    : null;
+
+  const manifestUrl = corpus === "ia" ? iaManifestUrl : locManifestUrl;
+  if (!manifestUrl) return;
+
+  // filter out supplemental image annotations (should get rid of ocr)
+  const noSupplementing = (annotation) => annotation.motivation !== 'supplementing';
+
+  
 
 
   function setupMirador(manifestId, viewerId, itemCanvasIndex) {
@@ -74,21 +99,17 @@ document.addEventListener("DOMContentLoaded", async function () {
       windows: [{ manifestId, canvasIndex: itemCanvasIndex, view: 'single' }],
       window: {
         defaultView: 'single',
-        highlightAllAnnotations: false, 
+        highlightAllAnnotations: false,
         forceDrawAnnotations: true,
         defaultSideBarPanel: 'annotations',
         sideBarOpen: true,
         canvasAnnotations: true,
         sideBarOpenByDefault: true,
-        
-
       },
       workspaceControlPanel: { enabled: false },
-  annotation: {
-    filter: noSupplementing
-  }
+      annotation: { filter: noSupplementing },
     });
-    console.log("instance", instance)
+
     return new Promise((resolve) => {
       const poll = () => {
         const ids = Object.keys(instance.store.getState()?.windows || {});
@@ -99,48 +120,50 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
-  
-
   try {
-    const r = await fetch(ia_manifestId);
+    // lc uses iiif v2, ia uses v3. 
+    const r = await fetch(manifestUrl);
     const manifest = await r.json();
-    const page = manifest.items?.[canvasIndex];
-    if (!page) return;
 
-    const dims = { width: page.width, height: page.height };
+    // try IIIF v3 first (items), else v2 (sequences[0].canvases)
+    const canvases = Array.isArray(manifest?.items)
+      ? manifest.items
+      : (manifest?.sequences?.[0]?.canvases || []);
 
-    const { instance, windowId } = await setupMirador(ia_manifestId, 'ia-mirador', canvasIndex);
+    let effectiveIndex = canvasIndex;
+if (corpus.startsWith(("ca", "acdc"))) {
+  effectiveIndex = Math.max(0, canvasIndex - 1);
+}
+
+const page = canvases?.[effectiveIndex];
+if (!page) {
+  console.warn("Canvas index out of range:", effectiveIndex, canvases.length);
+  return;
+}
+
+    // canvas dimensions
+const dims = (() => {
+  if (page.width && page.height) return { width: page.width, height: page.height };
+  const res = page.images?.[0]?.resource;
+  return { width: res?.width || 0, height: res?.height || 0 };
+})();
+    const { instance, windowId } = await setupMirador(manifestUrl, viewerId, effectiveIndex);
 
     const state = instance.store.getState();
-    const currentCanvasId = state.windows?.[windowId]?.canvasId || page.id;
+    const currentCanvasId =
+      state.windows?.[windowId]?.canvasId || page.id || page['@id'];
 
-    // console.log("🖼️ Mirador's canvasId:", currentCanvasId);
+    const clustersCsv = ''; 
+    const annoUrl = `/annotations/{{ doc_id }}.json?canvasId=${encodeURIComponent(currentCanvasId)}${clustersCsv ? `&clusters=${clustersCsv}` : ''}`;
 
-
-// build the *server* URL, passing the canvas id as a query param
-const clustersCsv = /* build your list or derive from UI */ '';
-const annoUrl = `/annotations/{{ doc_id }}.json?canvasId=${encodeURIComponent(currentCanvasId)}${clustersCsv ? `&clusters=${clustersCsv}` : ''}`;
-  // const annoBase = `/annotations/{{ doc_id }}.json`;
-  // console.log(annoBase)
-
-    // console.log("canvasid", currentCanvasId)
-
-    fetch(annoUrl)
-  .then(response => {
-    if (!response.ok) {
-      throw new Error("Network response was not ok " + response.statusText);
-    }
-    return response.json();
-  })
-
-
-    // timeout gives mirador time to load before loading annotaitons
+    // timeout bc mirador needs time to get setup before annotations can load
     setTimeout(() => {
-    instance.store.dispatch(Mirador.actions.requestAnnotation(currentCanvasId, annoUrl));
-    }, 600);
+      instance.store.dispatch(Mirador.actions.requestAnnotation(currentCanvasId, annoUrl));
+    }, 400);
 
-    const m = ("{{ images }}".match(/\/pct:([\d.]+),([\d.]+),([\d.]+),([\d.]+)\//) || []);
-    if (m.length === 5) {
+    // zoom on images
+    const m = ("{{ images or '' }}".match(/\/pct:([\d.]+),([\d.]+),([\d.]+),([\d.]+)\//) || []);
+    if (m.length === 5 && dims.width && dims.height) {
       const pct = { x:+m[1], y:+m[2], w:+m[3], h:+m[4] };
       const px  = {
         x: (pct.x/100)*dims.width,
@@ -149,20 +172,20 @@ const annoUrl = `/annotations/{{ doc_id }}.json?canvasId=${encodeURIComponent(cu
         h: (pct.h/100)*dims.height,
       };
       const center = { x: px.x + px.w/2, y: px.y + px.h/2 };
-      const action = Mirador.actions.updateViewport(windowId, { x: center.x, y: center.y, zoom: 0.5/px.w });
+      const action = Mirador.actions.updateViewport(windowId, {
+        x: center.x, y: center.y, zoom: 0.5/px.w
+      });
       setTimeout(() => instance.store.dispatch(action), 600);
     }
   } catch (e) {
-    console.error('[M3] IA error:', e);
+    console.error('[M3] Mirador error:', e);
   }
-
-  
 });
 </script>
 
 
 <style>
-  /* Make all annotation rectangles stand out a bit more */
+  /* debug this not sure if it works */
   [data-annotation-id] rect {
   stroke: rgba(255,0,0,0.9) !important;
   stroke-width: 3 !important;
