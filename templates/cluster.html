@@ -50,10 +50,9 @@
         {% endfor %}
     </div>
             <div class="col-md-6">
-                {% if corpus[index] == "ca" %}
+                {% if corpus[index] %}
 
-                <img src="{{ ca_images[index] }}" alt="Thumbnail" onerror="this.style.display='none';" class="img-fluid ">
-                {% elif corpus[index] != "ca" %}
+                
 
                 <img src="{{ images[index] }}" alt="Thumbnail" onerror="this.style.display='none';" class="img-fluid ">
                 {% endif %}

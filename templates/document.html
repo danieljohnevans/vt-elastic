@@ -21,8 +21,9 @@
                 {% endif %}
             </b>
         </p>    
-        {% if open == "true" and (not corpus.startswith('ia') and not corpus.startswith(('ca', 'acdc'))) %}
+        {% if open == "true" and (not corpus.startswith('ia') and not corpus.startswith('ca') and not corpus.startswith('acdc')) %}
         <div class="col-md-6">
+          <p>acdc</p>
                 {% for paragraph in paragraphs %}
                     {% set highlighted_paragraph = paragraph|replace(search_term, '<strong>' + search_term + '</strong>')|safe %}
                 <p>{{ highlighted_paragraph }}</p>
@@ -49,7 +50,8 @@
         {% elif corpus.startswith('ia') %}
   <div id="ia-mirador"></div>
 
-{% elif corpus.startswith(('ca', 'acdc')) %}
+{% elif corpus.startswith('ca') or corpus.startswith('acdc'):
+ %}
   <div id="ca-mirador"></div>
 
 {% endif %}
@@ -63,9 +65,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   const canvasIndex = Math.max(0, (rawCanvasIndex || 0));
 
   // Choose manifest and viewer holder
-  const viewerId =
-  corpus && corpus.startsWith(("ca", "acdc")) ? "ca-mirador" :
-  corpus === "ia" ? "ia-mirador" : null;
+  const isCA = typeof corpus === "string" && (corpus.startsWith("ca") || corpus.startsWith("acdc"));
+  const viewerId = isCA ? "ca-mirador" : (corpus === "ia" ? "ia-mirador" : null);
 
 if (!viewerId) return;
 
@@ -131,7 +132,7 @@ if (!mountEl) {
       : (manifest?.sequences?.[0]?.canvases || []);
 
     let effectiveIndex = canvasIndex;
-if (corpus.startsWith(("ca", "acdc"))) {
+if (isCA) {
   effectiveIndex = Math.max(0, canvasIndex - 1);
 }
 

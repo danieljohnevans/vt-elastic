@@ -3,7 +3,8 @@ from pprint import pprint
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 import os
-from datetime import datetime
+import urllib.parse
+
 
 load_dotenv()
 
@@ -63,7 +64,7 @@ class Search:
 
         body = {
             "query": {"bool": {"must": must}},
-            "_source": ["id", "p1seq", "p1x", "p1y", "p1w", "p1h", "cluster", "source"],
+            "_source": ["id", "p1seq", "p1x", "p1y", "p1w", "p1h", "p1width", "p1height", "cluster", "source"],
             "size": size,
             "sort": [
                 {"date": "asc"},
@@ -83,6 +84,8 @@ class Search:
                 "y":          s.get("p1y"),
                 "w":          s.get("p1w"),
                 "h":          s.get("p1h"),
+                "img_w":      s.get("p1width"),
+                "img_h":      s.get("p1height"),
             })
         return out
 

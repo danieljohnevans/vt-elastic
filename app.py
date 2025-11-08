@@ -745,7 +745,6 @@ def annotations_for_doc(doc_id):
 
     page_boxes = es.get_boxes_for_manifest_page(manifest_prefix, seq=seq)
 
-    print(page_boxes)
 
     if not page_boxes and page_image:
         pct = _parse_pct_from_page_image(page_image)
