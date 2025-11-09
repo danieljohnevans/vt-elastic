@@ -91,7 +91,16 @@ if (!mountEl) {
   // filter out supplemental image annotations (should get rid of ocr)
   const noSupplementing = (annotation) => annotation.motivation !== 'supplementing';
 
-  
+  const ReprintsTranslationPlugin = {
+  id: 'reprints-translation',
+  config: {
+    translations: {
+      en: {
+        annotations: 'Explore reprints on this page'
+      }
+    }
+  }
+};
 
 
   function setupMirador(manifestId, viewerId, itemCanvasIndex) {
@@ -107,9 +116,10 @@ if (!mountEl) {
         canvasAnnotations: true,
         sideBarOpenByDefault: true,
       },
+      
       workspaceControlPanel: { enabled: false },
       annotation: { filter: noSupplementing },
-    });
+    }, [ReprintsTranslationPlugin]);
 
     return new Promise((resolve) => {
       const poll = () => {

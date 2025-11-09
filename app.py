@@ -684,11 +684,11 @@ def make_annotation(canvas_id, uniq, coords_px, label="Annotation", cluster=None
     if cluster_id is not None:
         label_text = f"Cluster {cluster_id}"
     if cluster_count:
-        label_text += f" ({cluster_count})"
+        label_text += f" | {cluster_count} items in cluster"
     body.append({
         "type": "TextualBody",
         "format": "text/html",
-        "value": f"<a href='{href}' target='_blank' rel='noopener'>{label_text}</a>|"
+        "value": f"<a href='{href}' target='_blank' rel='noopener'>{label_text}</a>"
     })
 
     return {
@@ -742,6 +742,8 @@ def annotations_for_doc(doc_id):
 
 
     items = []
+    annos = []  
+
 
     page_boxes = es.get_boxes_for_manifest_page(manifest_prefix, seq=seq)
 
@@ -768,14 +770,20 @@ def annotations_for_doc(doc_id):
         cluster_url = url_for('get_cluster', cluster_id=cluster_id, _external=True)
         if box.get("es_id"):
             cluster_url = f"{cluster_url}?focus={box['es_id']}"
-        items.append(make_annotation(
+        anno = make_annotation(
             current_canvas_id,
             f"box-{seq}-{i}",
             {"x": box["x"], "y": box["y"], "w": box["w"], "h": box["h"]},
             label=box["label"] or "Citation",
             cluster={"id": cluster_id, "count": cluster_count},
             href=cluster_url
-        ))
+        )
+        annos.append((cluster_count, cluster_id, anno))
+
+    annos.sort(key=lambda t: (-t[0], t[1]))
+
+    items.extend(a for _, _, a in annos)
+
 
     anno_page = {
         "@context": "http://iiif.io/api/presentation/3/context.json",
@@ -783,6 +791,8 @@ def annotations_for_doc(doc_id):
         "type": "AnnotationPage",
         "items": items,
     }
+
+
 
     resp = make_response(jsonify(anno_page))
     resp.headers["Access-Control-Allow-Origin"] = "*"
