@@ -603,6 +603,7 @@ def _ia_canvas_id_from_manifest(manifest_id: str, seq: int):
         raise IndexError(f"Canvas index {seq} out of range (0..{len(items)-1})")
     canvas = items[seq]
     return canvas["id"], canvas.get("width"), canvas.get("height")
+    
 
 def loc_manifest_url_from_fields(series: str, date_str: str, ed: str) -> str:
     """
@@ -715,6 +716,13 @@ def annotations_for_doc(doc_id):
     cluster_url = f"https://clusters.viraltexts.org/cluster/{cluster_cur}"
 
     requested_canvas_id = request.args.get("canvasId")
+
+    seq_param = request.args.get("seq")
+    if seq_param is not None:
+        try:
+            seq = int(seq_param)
+        except ValueError:
+            pass
 
     try:
         if corpus == 'ia':

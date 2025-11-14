@@ -66,13 +66,13 @@ document.addEventListener("DOMContentLoaded", async function () {
   const isCA = typeof corpus === "string" && (corpus.startsWith("ca") || corpus.startsWith("acdc"));
   const viewerId = isCA ? "ca-mirador" : (corpus === "ia" ? "ia-mirador" : null);
 
-if (!viewerId) return;
+  if (!viewerId) return;
 
-const mountEl = document.getElementById(viewerId);
-if (!mountEl) {
-  console.error("Missing viewer container:", viewerId, "corpus:", corpus);
-  return;
-}
+  const mountEl = document.getElementById(viewerId);
+  if (!mountEl) {
+    console.error("Missing viewer container:", viewerId, "corpus:", corpus);
+    return;
+  }
 
   // build manifest URL per corpus
   const iaManifestUrl = `https://iiif.archive.org/iiif/3/{{ manifest_id }}/manifest.json`;
@@ -86,25 +86,24 @@ if (!mountEl) {
   const manifestUrl = corpus === "ia" ? iaManifestUrl : locManifestUrl;
   if (!manifestUrl) return;
 
-  // filter out supplemental image annotations (should get rid of ocr)
+  // filter out supplemental image annotations (should get rid of ocr-ish layers)
   const noSupplementing = (annotation) => annotation.motivation !== 'supplementing';
 
   const ReprintsTranslationPlugin = {
-  id: 'reprints-translation',
-  config: {
-    translations: {
-      en: {
-        annotations: 'Explore reprints on this page'
+    id: 'reprints-translation',
+    config: {
+      translations: {
+        en: {
+          annotations: 'Explore reprints on this page'
+        }
       }
     }
-  }
-};
-
+  };
 
   function setupMirador(manifestId, viewerId, itemCanvasIndex) {
     const instance = Mirador.viewer({
       id: viewerId,
-      windows: [{ manifestId, canvasIndex: itemCanvasIndex, view: 'single'}],
+      windows: [{ manifestId, canvasIndex: itemCanvasIndex, view: 'single' }],
       window: {
         defaultView: 'single',
         highlightAllAnnotations: false,
@@ -114,7 +113,6 @@ if (!mountEl) {
         canvasAnnotations: true,
         sideBarOpenByDefault: true,
       },
-      
       workspaceControlPanel: { enabled: false },
       annotation: { filter: noSupplementing },
     }, [ReprintsTranslationPlugin]);
@@ -130,7 +128,7 @@ if (!mountEl) {
   }
 
   try {
-    // lc uses iiif v2, ia uses v3. 
+    // lc uses iiif v2, ia uses v3.
     const r = await fetch(manifestUrl);
     const manifest = await r.json();
 
@@ -139,36 +137,80 @@ if (!mountEl) {
       ? manifest.items
       : (manifest?.sequences?.[0]?.canvases || []);
 
-    let effectiveIndex = canvasIndex;
-if (isCA) {
-  effectiveIndex = Math.max(0, canvasIndex - 1);
-}
+    // map canvasId -> index so we can compute seq later
+    const canvasIndexById = {};
+    canvases.forEach((c, i) => {
+      const cid = c.id || c['@id'];
+      if (cid) canvasIndexById[cid] = i;
+    });
 
-const page = canvases?.[effectiveIndex];
-if (!page) {
-  console.warn("Canvas index out of range:", effectiveIndex, canvases.length);
-  return;
-}
+    let effectiveIndex = canvasIndex;
+    if (isCA) {
+      // your existing off-by-one fix for LOC
+      effectiveIndex = Math.max(0, canvasIndex - 1);
+    }
+
+    const page = canvases?.[effectiveIndex];
+    if (!page) {
+      console.warn("Canvas index out of range:", effectiveIndex, canvases.length);
+      return;
+    }
 
     // canvas dimensions
-const dims = (() => {
-  if (page.width && page.height) return { width: page.width, height: page.height };
-  const res = page.images?.[0]?.resource;
-  return { width: res?.width || 0, height: res?.height || 0 };
-})();
+    const dims = (() => {
+      if (page.width && page.height) return { width: page.width, height: page.height };
+      const res = page.images?.[0]?.resource;
+      return { width: (res?.width || 0), height: (res?.height || 0) };
+    })();
+
+    // 🚀 create Mirador now
     const { instance, windowId } = await setupMirador(manifestUrl, viewerId, effectiveIndex);
 
+    // current canvasId once Mirador is up
     const state = instance.store.getState();
-    const currentCanvasId =
+    let currentCanvasId =
       state.windows?.[windowId]?.canvasId || page.id || page['@id'];
 
-    const clustersCsv = ''; 
-    const annoUrl = `/annotations/{{ doc_id }}.json?canvasId=${encodeURIComponent(currentCanvasId)}${clustersCsv ? `&clusters=${clustersCsv}` : ''}`;
+    const clustersCsv = '';
+    const docId = "{{ doc_id }}";
 
-    // timeout bc mirador needs time to get setup before annotations can load
+    // Helper to request annotations for a given canvasId
+    function requestAnnotationsForCanvas(canvasId) {
+      const idx = canvasIndexById[canvasId];
+      if (idx == null) return;
+
+      // If CA/acdc p1seq is 1-based, use (idx + 1) for those
+      const seq = isCA ? (idx + 1) : idx;
+
+      const annoUrl =
+        `/annotations/${docId}.json` +
+        `?canvasId=${encodeURIComponent(canvasId)}` +
+        `&seq=${seq}` +
+        (clustersCsv ? `&clusters=${clustersCsv}` : '');
+
+      instance.store.dispatch(
+        Mirador.actions.requestAnnotation(canvasId, annoUrl)
+      );
+    }
+
+    // Initial load (after a short delay so Mirador is ready)
     setTimeout(() => {
-      instance.store.dispatch(Mirador.actions.requestAnnotation(currentCanvasId, annoUrl));
+      requestAnnotationsForCanvas(currentCanvasId);
     }, 400);
+
+    // Subscribe to page changes (next/previous)
+    let lastCanvasId = currentCanvasId;
+    instance.store.subscribe(() => {
+      const state = instance.store.getState();
+      const win = state.windows?.[windowId];
+      if (!win) return;
+
+      const newCanvasId = win.canvasId;
+      if (newCanvasId && newCanvasId !== lastCanvasId) {
+        lastCanvasId = newCanvasId;
+        requestAnnotationsForCanvas(newCanvasId);
+      }
+    });
 
     // zoom on images
     const m = ("{{ images or '' }}".match(/\/pct:([\d.]+),([\d.]+),([\d.]+),([\d.]+)\//) || []);
@@ -191,6 +233,7 @@ const dims = (() => {
   }
 });
 </script>
+
 
 
 <style>
