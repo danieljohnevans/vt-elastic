@@ -770,11 +770,25 @@ def annotations_for_doc(doc_id):
         cluster_url = url_for('get_cluster', cluster_id=cluster_id, _external=True)
         if box.get("es_id"):
             cluster_url = f"{cluster_url}?focus={box['es_id']}"
+
+        img_w = box.get("img_w") or canvas_w
+        img_h = box.get("img_h") or canvas_h
+
+        sx = canvas_w / img_w if img_w else 1.0
+        sy = canvas_h / img_h if img_h else 1.0
+
+        coords = {
+            "x": box["x"] * sx,
+            "y": box["y"] * sy,
+            "w": box["w"] * sx,
+            "h": box["h"] * sy,
+        }
+
         anno = make_annotation(
             current_canvas_id,
             f"box-{seq}-{i}",
-            {"x": box["x"], "y": box["y"], "w": box["w"], "h": box["h"]},
-            label=box["label"] or "Citation",
+            coords,
+            label=box.get("label") or "Citation",
             cluster={"id": cluster_id, "count": cluster_count},
             href=cluster_url
         )

@@ -61,10 +61,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   // server-passed bits
   const corpus = "{{ corpus }}";
   const rawCanvasIndex = {{ canvas_index if canvas_index is not none else 0 }};
-  // Your ES "p1seq" is effectively 0-based, but we still guard here:
   const canvasIndex = Math.max(0, (rawCanvasIndex || 0));
 
-  // Choose manifest and viewer holder
   const isCA = typeof corpus === "string" && (corpus.startsWith("ca") || corpus.startsWith("acdc"));
   const viewerId = isCA ? "ca-mirador" : (corpus === "ia" ? "ia-mirador" : null);
 
@@ -106,7 +104,7 @@ if (!mountEl) {
   function setupMirador(manifestId, viewerId, itemCanvasIndex) {
     const instance = Mirador.viewer({
       id: viewerId,
-      windows: [{ manifestId, canvasIndex: itemCanvasIndex, view: 'single' }],
+      windows: [{ manifestId, canvasIndex: itemCanvasIndex, view: 'single'}],
       window: {
         defaultView: 'single',
         highlightAllAnnotations: false,
