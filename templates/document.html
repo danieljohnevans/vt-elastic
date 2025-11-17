@@ -22,8 +22,8 @@
             </b>
         </p>    
         {% if open == "true" and (not corpus.startswith('ia') and not corpus.startswith('ca') and not corpus.startswith('acdc')) %}
+        <h4>View in Context Not Available Yet for this Paper.</h4>
         <div class="col-md-6">
-          <p>acdc</p>
                 {% for paragraph in paragraphs %}
                     {% set highlighted_paragraph = paragraph|replace(search_term, '<strong>' + search_term + '</strong>')|safe %}
                 <p>{{ highlighted_paragraph }}</p>
@@ -163,7 +163,6 @@ document.addEventListener("DOMContentLoaded", async function () {
       return { width: (res?.width || 0), height: (res?.height || 0) };
     })();
 
-    // 🚀 create Mirador now
     const { instance, windowId } = await setupMirador(manifestUrl, viewerId, effectiveIndex);
 
     // current canvasId once Mirador is up
@@ -174,12 +173,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     const clustersCsv = '';
     const docId = "{{ doc_id }}";
 
-    // Helper to request annotations for a given canvasId
     function requestAnnotationsForCanvas(canvasId) {
       const idx = canvasIndexById[canvasId];
       if (idx == null) return;
 
-      // If CA/acdc p1seq is 1-based, use (idx + 1) for those
       const seq = isCA ? (idx + 1) : idx;
 
       const annoUrl =
@@ -193,12 +190,10 @@ document.addEventListener("DOMContentLoaded", async function () {
       );
     }
 
-    // Initial load (after a short delay so Mirador is ready)
     setTimeout(() => {
       requestAnnotationsForCanvas(currentCanvasId);
     }, 200);
 
-    // Subscribe to page changes (next/previous)
     let lastCanvasId = currentCanvasId;
     instance.store.subscribe(() => {
       const state = instance.store.getState();
