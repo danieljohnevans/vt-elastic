@@ -1,12 +1,13 @@
 import os
 from elasticsearch import Elasticsearch
 
-def elastic_client ():
-    url = os.environ.get("ELASTIC_URL")
-    password = os.environ.get("ELASTIC_PASSWORD")
+def elastic_client():
+    host = os.getenv('ES_HOST', 'https://es.viral-texts.software.ncsa.illinois.edu')
+    user = os.getenv('ES_USER', 'elastic')
+    password = os.getenv('ES_PASSWORD')
     client = Elasticsearch(
-        hosts=url,
-        basic_auth=("elastic", password)
+        hosts=host,
+        basic_auth=(user, password)
     )
 
     return client
