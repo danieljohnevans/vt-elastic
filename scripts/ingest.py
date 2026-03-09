@@ -10,6 +10,17 @@ from datetime import datetime
 
 report_freq = 2000
 
+# Load uid -> Elasticsearch _id mapping (produced by export_id_map.py).
+# Preserves published document URLs across reindexes.
+id_map_path = os.path.join(os.path.dirname(__file__), "uid_to_esid.json")
+if os.path.exists(id_map_path):
+    with open(id_map_path, "r") as f:
+        id_map = json.load(f)
+    print(f"Loaded {len(id_map)} uid -> _id mappings from {id_map_path}")
+else:
+    id_map = {}
+    print("No uid_to_esid.json found; new documents will get uid-based IDs.")
+
 def gendata(filename:str):
     with open(filename, "r") as f:
         tick = datetime.now()
@@ -26,8 +37,10 @@ def gendata(filename:str):
 
             doc = json.loads(l)
             doc['source_file'] = filename
+            uid_str = str(doc["uid"])
             yield {
                 "_index": "search",
+                "_id": id_map.get(uid_str, uid_str),
                 "_source": doc
             }
 

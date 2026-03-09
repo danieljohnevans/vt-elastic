@@ -351,8 +351,16 @@ def loc_proxy():
     url = request.args.get("url")
     if not url or not url.startswith("https://www.loc.gov/"):
         abort(400, "Missing or invalid url")
-    r = requests.get(url, timeout=30)
-    r.raise_for_status()
+    try:
+        r = requests.get(
+            url,
+            timeout=30,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; VTElastic/1.0)"},
+        )
+        r.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        status = getattr(e.response, "status_code", 502) if hasattr(e, "response") else 502
+        abort(status, f"LOC request failed: {e}")
     resp = make_response(r.content)
     resp.headers["Content-Type"] = r.headers.get("Content-Type", "application/json")
     resp.headers["Access-Control-Allow-Origin"] = "*"
@@ -631,7 +639,7 @@ def _loc_canvas_id_with_dims(series: str, date_str: str, ed: str, seq: int):
     and v3 (items).
     """
     url = loc_manifest_url_from_fields(series, date_str, ed)
-    r = requests.get(url, timeout=20)
+    r = requests.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0 (compatible; VTElastic/1.0)"})
     r.raise_for_status()
     data = r.json()
 

@@ -185,6 +185,23 @@ The script provides progress updates, including:
 Ensure you have the necessary permissions to read from the input directory and write to the "processed" subdirectory.
 
 
+# Preserving Document IDs Across Reindexes
+
+Document URLs (`/document/<_id>`) are referenced in published works, so Elasticsearch `_id` values must be preserved when reindexing. The ingest script supports this via a uid-to-id mapping file.
+
+## Reindex Workflow
+
+1. **Before deleting the old index**, export the current `uid -> _id` mapping:
+   ```bash
+   python export_id_map.py
+   ```
+   This creates `uid_to_esid.json` containing a mapping of every document's `uid` field to its current Elasticsearch `_id`.
+
+2. **Reindex as normal** using `ingest.py`. If `uid_to_esid.json` exists in the scripts directory, `ingest.py` will automatically use it to assign the original `_id` to each document. New documents (not in the mapping) get their `uid` as the `_id`.
+
+3. **For fresh indexes** (no prior IDs to preserve), simply run `ingest.py` without a mapping file. Each document will receive its `uid` as a stable `_id`.
+
+
 # Data Ingestion Job
 
 The ingest script can acheive greater throughput by running several in parallele. We use a kubernetes
