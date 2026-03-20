@@ -39,7 +39,7 @@ def gendata(filename:str):
             doc['source_file'] = filename
             uid_str = str(doc["uid"])
             yield {
-                "_index": "search",
+                "_index": "viral-texts",
                 "_id": id_map.get(uid_str, uid_str),
                 "_source": doc
             }
