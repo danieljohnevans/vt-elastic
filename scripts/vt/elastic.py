@@ -7,7 +7,9 @@ def elastic_client():
     password = os.getenv('ES_PASSWORD')
     client = Elasticsearch(
         hosts=host,
-        basic_auth=(user, password)
+        basic_auth=(user, password),
+        verify_certs=False,
+        ssl_show_warn=False
     )
 
     return client
