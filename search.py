@@ -93,6 +93,22 @@ class Search:
         return out
 
 
+    def get_cluster_date_range(self, cluster_id):
+        body = {
+            "query": {"term": {"cluster": cluster_id}},
+            "size": 0,
+            "aggs": {
+                "min_date": {"min": {"field": "date"}},
+                "max_date": {"max": {"field": "date"}}
+            }
+        }
+        resp = self.search(body=body)
+        aggs = resp["aggregations"]
+        return {
+            "min_date": aggs["min_date"].get("value_as_string"),
+            "max_date": aggs["max_date"].get("value_as_string"),
+        }
+
     #no longer necessary. pulling data size data from metadata and reprints from aggs 2/25. keep in for a few cycles
     def retrieve_cluster(self, cluster_value, search_term):
 

@@ -303,20 +303,10 @@ def handle_search():
     }
 
 
-        ##### get min_date and max_date
+        ##### get min_date and max_date via aggregation (no docs fetched)
     cluster_date_info = {}
     for key in clusters_results:
-        clustr = es.retrieve_cluster(key, query)
-        dates = [document.get('date', '') for document in clustr]
-
-        if dates:
-            min_date = min(dates)
-            max_date = max(dates)
-        else:
-            min_date = None
-            max_date = None
-
-        cluster_date_info[key] = {'min_date': min_date, 'max_date': max_date}
+        cluster_date_info[key] = es.get_cluster_date_range(key)
     
 
     for key in clusters_results:
