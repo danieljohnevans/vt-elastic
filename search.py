@@ -17,7 +17,9 @@ class Search:
 
         self.es = Elasticsearch(
             es_host,
-            basic_auth=(es_user, es_password)
+            basic_auth=(es_user, es_password),
+                verify_certs=False,
+    ssl_show_warn=False
         )
 
         client_info = self.es.info()
