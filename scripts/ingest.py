@@ -12,15 +12,17 @@ report_freq = 2000
 
 # Load uid:begin -> Elasticsearch _id mapping (produced by export_id_map.py).
 # Uses composite key because uid alone is not unique (identifies page, not passage).
-# Preserves published document URLs across reindexes.
-id_map_path = os.path.join(os.path.dirname(__file__), "uid_to_esid.json")
+# JSONL format: one {key: value} per line to handle 259M+ entries without OOM.
+id_map_path = os.path.join(os.path.dirname(__file__), "uid_to_esid.jsonl")
+id_map = {}
 if os.path.exists(id_map_path):
+    print(f"Loading uid:begin -> _id mappings from {id_map_path}...")
     with open(id_map_path, "r") as f:
-        id_map = json.load(f)
-    print(f"Loaded {len(id_map)} uid:begin -> _id mappings from {id_map_path}")
+        for line in f:
+            id_map.update(json.loads(line))
+    print(f"Loaded {len(id_map)} uid:begin -> _id mappings")
 else:
-    id_map = {}
-    print("No uid_to_esid.json found; new documents will get composite-key IDs.")
+    print("No uid_to_esid.jsonl found; new documents will get composite-key IDs.")
 
 def gendata(filename:str):
     with open(filename, "r") as f:
