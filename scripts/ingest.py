@@ -1,3 +1,4 @@
+import dbm
 import json
 import os, os.path
 import shutil
@@ -10,19 +11,15 @@ from datetime import datetime
 
 report_freq = 2000
 
-# Load uid:begin -> Elasticsearch _id mapping (produced by export_id_map.py).
-# Uses composite key because uid alone is not unique (identifies page, not passage).
-# JSONL format: one {key: value} per line to handle 259M+ entries without OOM.
-id_map_path = os.path.join(os.path.dirname(__file__), "uid_to_esid.jsonl")
-id_map = {}
-if os.path.exists(id_map_path):
-    print(f"Loading uid:begin -> _id mappings from {id_map_path}...")
-    with open(id_map_path, "r") as f:
-        for line in f:
-            id_map.update(json.loads(line))
-    print(f"Loaded {len(id_map)} uid:begin -> _id mappings")
-else:
-    print("No uid_to_esid.jsonl found; new documents will get composite-key IDs.")
+# Open uid:begin -> _id mapping as on-disk dbm database.
+# Built by build_id_db.py from uid_to_esid.jsonl. Minimal RAM usage.
+db_path = os.path.join(os.path.dirname(__file__), "uid_to_esid")
+try:
+    id_db = dbm.open(db_path, "r")
+    print(f"Opened id mapping database at {db_path}")
+except dbm.error:
+    id_db = None
+    print("No uid_to_esid db found; new documents will get composite-key IDs.")
 
 def gendata(filename:str):
     with open(filename, "r") as f:
@@ -43,9 +40,12 @@ def gendata(filename:str):
             uid_str = str(doc["uid"])
             begin_str = str(doc.get("begin", ""))
             composite_key = f"{uid_str}:{begin_str}"
+            es_id = id_db.get(composite_key, composite_key) if id_db else composite_key
+            if isinstance(es_id, bytes):
+                es_id = es_id.decode()
             yield {
                 "_index": "viral-texts",
-                "_id": id_map.get(composite_key, composite_key),
+                "_id": es_id,
                 "_source": doc
             }
 
