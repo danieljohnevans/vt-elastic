@@ -5,7 +5,7 @@ import os
 
 scripts_dir = os.path.dirname(__file__)
 jsonl_path = os.path.join(scripts_dir, "uid_to_esid.jsonl")
-db_path = os.path.join(scripts_dir, "uid_to_esid")
+db_path = "/data/vt_data/uid_to_esid"
 
 count = 0
 with dbm.open(db_path, "n") as db, open(jsonl_path, "r") as f:

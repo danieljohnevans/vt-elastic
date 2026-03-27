@@ -13,7 +13,7 @@ report_freq = 2000
 
 # Open uid:begin -> _id mapping as on-disk dbm database.
 # Built by build_id_db.py from uid_to_esid.jsonl. Minimal RAM usage.
-db_path = os.path.join(os.path.dirname(__file__), "uid_to_esid")
+db_path = "/data/vt_data/uid_to_esid"
 try:
     id_db = dbm.open(db_path, "r")
     print(f"Opened id mapping database at {db_path}")
