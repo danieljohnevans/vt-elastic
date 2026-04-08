@@ -1,7 +1,7 @@
-import dbm
 import json
 import os, os.path
 import shutil
+import sqlite3
 import sys
 from vt.elastic import elastic_client
 
@@ -11,15 +11,16 @@ from datetime import datetime
 
 report_freq = 2000
 
-# Open uid:begin -> _id mapping as on-disk dbm database.
-# Built by build_id_db.py from uid_to_esid.jsonl. Minimal RAM usage.
-db_path = "/data/vt_data/uid_to_esid"
-try:
-    id_db = dbm.open(db_path, "r")
+# Open uid:begin -> _id mapping as SQLite database.
+# Built by build_id_db.py from uid_to_esid.jsonl.
+db_path = "/data/vt_data/uid_to_esid.db"
+id_db = None
+if os.path.exists(db_path):
+    id_db = sqlite3.connect(db_path)
+    id_db.execute("PRAGMA journal_mode=WAL")
     print(f"Opened id mapping database at {db_path}")
-except dbm.error:
-    id_db = None
-    print("No uid_to_esid db found; new documents will get composite-key IDs.")
+else:
+    print("No uid_to_esid.db found; new documents will get composite-key IDs.")
 
 def gendata(filename:str):
     with open(filename, "r") as f:
@@ -40,9 +41,11 @@ def gendata(filename:str):
             uid_str = str(doc["uid"])
             begin_str = str(doc.get("begin", ""))
             composite_key = f"{uid_str}:{begin_str}"
-            es_id = id_db.get(composite_key, composite_key) if id_db else composite_key
-            if isinstance(es_id, bytes):
-                es_id = es_id.decode()
+            if id_db:
+                row = id_db.execute("SELECT value FROM id_map WHERE key = ?", (composite_key,)).fetchone()
+                es_id = row[0] if row else composite_key
+            else:
+                es_id = composite_key
             yield {
                 "_index": "viral-texts",
                 "_id": es_id,
