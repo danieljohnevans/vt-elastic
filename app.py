@@ -798,13 +798,15 @@ def annotations_for_doc(doc_id):
     else:
         page_boxes = es.get_boxes_for_manifest_page(manifest_id, seq=seq)
 
-    # Filter out documents whose page_image references a different physical page
+    # Filter out documents whose page_image references a different physical page.
+    # Keep boxes that have no page_image (can't verify → benefit of the doubt).
     if corpus.startswith(('ca', 'acdc')) and page_image:
         doc_image_id = _extract_iiif_image_id(page_image)
         if doc_image_id:
             page_boxes = [
                 box for box in page_boxes
-                if _extract_iiif_image_id(box.get("page_image")) == doc_image_id
+                if not box.get("page_image")
+                or _extract_iiif_image_id(box.get("page_image")) == doc_image_id
             ]
 
     if not page_boxes and page_image:
@@ -912,7 +914,8 @@ def page_reprints(doc_id):
         page_boxes = es.get_boxes_for_manifest_page(manifest_id, seq=seq)
         query_type = "manifest_wildcard"
 
-    # Filter out documents whose page_image references a different physical page
+    # Filter out documents whose page_image references a different physical page.
+    # Keep boxes that have no page_image (can't verify → benefit of the doubt).
     unfiltered_count = len(page_boxes)
     doc_page_image = src.get('page_image')
     if corpus.startswith(('ca', 'acdc')) and doc_page_image:
@@ -920,7 +923,8 @@ def page_reprints(doc_id):
         if doc_image_id:
             page_boxes = [
                 box for box in page_boxes
-                if _extract_iiif_image_id(box.get("page_image")) == doc_image_id
+                if not box.get("page_image")
+                or _extract_iiif_image_id(box.get("page_image")) == doc_image_id
             ]
 
     reprints = []
