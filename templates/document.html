@@ -42,11 +42,31 @@
             </div>
         
         {% elif corpus.startswith('ia') %}
-  <div id="ia-mirador"></div>
+  <div class="row" id="viewer-row">
+    <div class="col-md-4" id="reprints-panel" style="max-height: 85vh; overflow-y: auto;">
+      <h5>Reprints on this page</h5>
+      <div id="reprints-list">
+        <p class="text-muted">Loading...</p>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div id="ia-mirador"></div>
+    </div>
+  </div>
 
 {% elif corpus.startswith('ca') or corpus.startswith('acdc'):
  %}
-  <div id="ca-mirador"></div>
+  <div class="row" id="viewer-row">
+    <div class="col-md-4" id="reprints-panel" style="max-height: 85vh; overflow-y: auto;">
+      <h5>Reprints on this page</h5>
+      <div id="reprints-list">
+        <p class="text-muted">Loading...</p>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div id="ca-mirador"></div>
+    </div>
+  </div>
 
 {% endif %}
 
@@ -101,9 +121,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         highlightAllAnnotations: false,
         forceDrawAnnotations: true,
         defaultSideBarPanel: 'annotations',
-        sideBarOpen: true,
+        sideBarOpen: false,
         canvasAnnotations: true,
-        sideBarOpenByDefault: true,
+        sideBarOpenByDefault: false,
       },
       workspaceControlPanel: { enabled: false },
       annotation: { filter: noSupplementing },
@@ -183,8 +203,63 @@ document.addEventListener("DOMContentLoaded", async function () {
       );
     }
 
+    // --- Reprints panel ---
+    async function fetchReprintsForPage(seq) {
+      const listEl = document.getElementById('reprints-list');
+      if (!listEl) return;
+      listEl.innerHTML = '<p class="text-muted">Loading reprints...</p>';
+
+      try {
+        const url = `/page-reprints/${docId}.json?seq=${seq}`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        const reprints = data.reprints || [];
+
+        if (reprints.length === 0) {
+          listEl.innerHTML = '<p class="text-muted">No reprints found on this page.</p>';
+          return;
+        }
+
+        listEl.innerHTML = '';
+        reprints.forEach((r, i) => {
+          const card = document.createElement('div');
+          card.className = 'card mb-2';
+          card.style.cursor = 'pointer';
+
+          const dateStr = r.date || '';
+          const placeStr = r.place || '';
+          const meta = [dateStr, placeStr].filter(Boolean).join(' · ');
+
+          let snippetHtml = '';
+          if (r.open === 'true' && r.snippet) {
+            snippetHtml = `<p class="card-text small text-muted mb-1">${r.snippet}</p>`;
+          } else if (r.open === 'false') {
+            snippetHtml = `<p class="card-text small text-muted mb-1"><em>Proprietary — text unavailable</em></p>`;
+          }
+
+          card.innerHTML = `
+            <div class="card-body py-2 px-3">
+              <h6 class="card-title mb-1">
+                ${r.doc_url ? `<a href="${r.doc_url}">${r.source}</a>` : r.source}
+              </h6>
+              ${meta ? `<p class="card-text small mb-1">${meta}</p>` : ''}
+              ${snippetHtml}
+              <a href="${r.cluster_url}" class="small">Browse ${r.cluster_count} reprints in cluster &rarr;</a>
+            </div>
+          `;
+          listEl.appendChild(card);
+        });
+      } catch (e) {
+        console.error('Failed to load reprints:', e);
+        listEl.innerHTML = '<p class="text-danger">Failed to load reprints.</p>';
+      }
+    }
+
+    // Initial load
+    const initialSeq = isCA ? (effectiveIndex + 1) : effectiveIndex;
     setTimeout(() => {
       requestAnnotationsForCanvas(currentCanvasId);
+      fetchReprintsForPage(initialSeq);
     }, 200);
 
     let lastCanvasId = currentCanvasId;
@@ -197,6 +272,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (newCanvasId && newCanvasId !== lastCanvasId) {
         lastCanvasId = newCanvasId;
         requestAnnotationsForCanvas(newCanvasId);
+
+        const idx = canvasIndexById[newCanvasId];
+        if (idx != null) {
+          const seq = isCA ? (idx + 1) : idx;
+          fetchReprintsForPage(seq);
+        }
       }
     });
 
@@ -225,12 +306,24 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 
 <style>
-  /* debug this not sure if it works */
   [data-annotation-id] rect {
-  stroke: rgba(255,0,0,0.9) !important;
-  stroke-width: 3 !important;
-  fill: rgba(255,0,0,0.10) !important;
-}
+    stroke: rgba(255,0,0,0.9) !important;
+    stroke-width: 3 !important;
+    fill: rgba(255,0,0,0.10) !important;
+  }
+  #ia-mirador, #ca-mirador {
+    min-height: 80vh;
+  }
+  #reprints-panel {
+    border-right: 1px solid #dee2e6;
+    padding-right: 1rem;
+  }
+  #reprints-panel .card {
+    border-left: 3px solid #0d6efd;
+  }
+  #reprints-panel .card:hover {
+    background-color: #f8f9fa;
+  }
 </style>
 
 

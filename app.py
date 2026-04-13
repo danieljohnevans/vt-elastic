@@ -764,19 +764,13 @@ def annotations_for_doc(doc_id):
         page_boxes = es.get_boxes_for_newspaper_page(
             src.get('series'), src.get('date'), src.get('ed'), seq
         )
-        print(f"[ANNO] structured query: series={src.get('series')} date={src.get('date')} "
-              f"ed={src.get('ed')} seq={seq} → {len(page_boxes)} boxes")
         if not page_boxes:
             # Fallback to p1iiif wildcard
             p1iiif = src.get('p1iiif') or src.get('url') or ''
             manifest_prefix = p1iiif.rsplit(':', 1)[0]
             page_boxes = es.get_boxes_for_manifest_page(manifest_prefix, seq=seq)
-            print(f"[ANNO] wildcard fallback: prefix={manifest_prefix} → {len(page_boxes)} boxes")
     else:
         page_boxes = es.get_boxes_for_manifest_page(manifest_id, seq=seq)
-
-    if page_image:
-        print(f"[ANNO] page_image pct: {_parse_pct_from_page_image(page_image)}")
 
     if not page_boxes and page_image:
         pct = _parse_pct_from_page_image(page_image)
@@ -806,10 +800,6 @@ def annotations_for_doc(doc_id):
 
         sx = canvas_w / img_w if img_w else 1.0
         sy = canvas_h / img_h if img_h else 1.0
-
-        print(f"[ANNO] box={box['x']},{box['y']},{box['w']},{box['h']} "
-              f"img={box.get('img_w')},{box.get('img_h')} "
-              f"canvas={canvas_w},{canvas_h} scale={sx:.4f},{sy:.4f}")
 
         coords = {
             "x": box["x"] * sx,
@@ -849,10 +839,73 @@ def annotations_for_doc(doc_id):
 
 
 
+@app.get("/page-reprints/<doc_id>.json")
+def page_reprints(doc_id):
+    document = es.retrieve_document(doc_id)
+    if not document or '_source' not in document:
+        abort(404)
+
+    src = document['_source']
+    corpus = src.get('corpus')
+    manifest_id = src.get('id')
+    seq = int(src.get('p1seq') or 0)
+
+    seq_param = request.args.get("seq")
+    if seq_param is not None:
+        try:
+            seq = int(seq_param)
+        except ValueError:
+            pass
+
+    page_boxes = []
+    if corpus.startswith(('ca', 'acdc')):
+        page_boxes = es.get_boxes_for_newspaper_page(
+            src.get('series'), src.get('date'), src.get('ed'), seq
+        )
+        if not page_boxes:
+            p1iiif = src.get('p1iiif') or src.get('url') or ''
+            manifest_prefix = p1iiif.rsplit(':', 1)[0]
+            page_boxes = es.get_boxes_for_manifest_page(manifest_prefix, seq=seq)
+    else:
+        page_boxes = es.get_boxes_for_manifest_page(manifest_id, seq=seq)
+
+    reprints = []
+    seen_clusters = set()
+    for box in page_boxes:
+        cluster_id = box.get("cluster")
+        if cluster_id in seen_clusters:
+            continue
+        seen_clusters.add(cluster_id)
+
+        cluster_count = es.get_cluster_count(cluster_id)
+        text = box.get("text") or ""
+        snippet = text[:200] + ("..." if len(text) > 200 else "")
+
+        reprints.append({
+            "es_id": box.get("es_id"),
+            "source": box.get("label") or "Unknown",
+            "date": (box.get("date") or "")[:10],
+            "place": box.get("place") or "",
+            "cluster_id": cluster_id,
+            "cluster_count": cluster_count,
+            "cluster_url": url_for('get_cluster', cluster_id=cluster_id),
+            "doc_url": url_for('get_document', id=box.get("es_id")) if box.get("es_id") else None,
+            "open": box.get("open") or "false",
+            "snippet": snippet,
+        })
+
+    reprints.sort(key=lambda r: (-r["cluster_count"], r["cluster_id"]))
+
+    resp = make_response(jsonify({"reprints": reprints}))
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Cache-Control"] = "public, max-age=300"
+    return resp
+
+
 @app.after_request
 def add_cors_headers(resp):
     resp.headers["Access-Control-Allow-Origin"] = "*"
-    return resp    
+    return resp
     
 
 @app.route('/about')

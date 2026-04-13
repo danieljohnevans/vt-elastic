@@ -60,7 +60,8 @@ class Search:
 
         body = {
             "query": {"bool": {"must": must}},
-            "_source": ["id", "p1seq", "p1x", "p1y", "p1w", "p1h", "p1width", "p1height", "cluster", "source"],
+            "_source": ["id", "p1seq", "p1x", "p1y", "p1w", "p1h", "p1width", "p1height",
+                        "cluster", "source", "date", "placeOfPublication", "open", "text"],
             "size": size,
             "sort": [
                 {"date": "asc"},
@@ -72,6 +73,7 @@ class Search:
         for hit in resp["hits"]["hits"]:
             s = hit["_source"]
             out.append({
+                "es_id":      hit["_id"],
                 "manifest_id": s.get("id"),
                 "seq":        int(s.get("p1seq") or 0),
                 "cluster":    s.get("cluster"),
@@ -82,6 +84,10 @@ class Search:
                 "h":          s.get("p1h"),
                 "img_w":      s.get("p1width"),
                 "img_h":      s.get("p1height"),
+                "date":       s.get("date"),
+                "place":      s.get("placeOfPublication"),
+                "open":       s.get("open"),
+                "text":       s.get("text"),
             })
         return out
 
@@ -106,7 +112,8 @@ class Search:
 
         body = {
             "query": {"bool": {"must": must}},
-            "_source": ["id", "p1seq", "p1x", "p1y", "p1w", "p1h", "p1width", "p1height", "cluster", "source"],
+            "_source": ["id", "p1seq", "p1x", "p1y", "p1w", "p1h", "p1width", "p1height",
+                        "cluster", "source", "date", "placeOfPublication", "open", "text"],
             "size": size,
             "sort": [
                 {"date": "asc"},
@@ -118,6 +125,7 @@ class Search:
         for hit in resp["hits"]["hits"]:
             s = hit["_source"]
             out.append({
+                "es_id":      hit["_id"],
                 "manifest_id": s.get("id"),
                 "seq":        int(s.get("p1seq") or 0),
                 "cluster":    s.get("cluster"),
@@ -128,6 +136,10 @@ class Search:
                 "h":          s.get("p1h"),
                 "img_w":      s.get("p1width"),
                 "img_h":      s.get("p1height"),
+                "date":       s.get("date"),
+                "place":      s.get("placeOfPublication"),
+                "open":       s.get("open"),
+                "text":       s.get("text"),
             })
         return out
 
