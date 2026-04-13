@@ -345,7 +345,7 @@ def loc_proxy():
         r = requests.get(
             url,
             timeout=30,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; VTElastic/1.0)"},
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
         )
         r.raise_for_status()
     except requests.exceptions.RequestException as e:
@@ -629,7 +629,7 @@ def _loc_canvas_id_with_dims(series: str, date_str: str, ed: str, seq: int):
     and v3 (items).
     """
     url = loc_manifest_url_from_fields(series, date_str, ed)
-    r = requests.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0 (compatible; VTElastic/1.0)"})
+    r = requests.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"})
     r.raise_for_status()
     data = r.json()
 
@@ -735,7 +735,15 @@ def annotations_for_doc(doc_id):
         else:
             abort(400, f"Unsupported corpus '{corpus}' for annotations")
     except Exception as e:
-        abort(400, f"Failed to resolve canvasId: {e}")
+        empty = {
+            "@context": "http://iiif.io/api/presentation/3/context.json",
+            "id": url_for("annotations_for_doc", doc_id=doc_id, _external=True),
+            "type": "AnnotationPage",
+            "items": [],
+        }
+        resp = make_response(jsonify(empty))
+        resp.headers["Access-Control-Allow-Origin"] = "*"
+        return resp
 
     if requested_canvas_id:
         current_canvas_id = requested_canvas_id
