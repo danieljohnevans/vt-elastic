@@ -858,16 +858,20 @@ def page_reprints(doc_id):
             pass
 
     page_boxes = []
+    query_type = "none"
     if corpus.startswith(('ca', 'acdc')):
         page_boxes = es.get_boxes_for_newspaper_page(
             src.get('series'), src.get('date'), src.get('ed'), seq
         )
+        query_type = "structured"
         if not page_boxes:
             p1iiif = src.get('p1iiif') or src.get('url') or ''
             manifest_prefix = p1iiif.rsplit(':', 1)[0]
             page_boxes = es.get_boxes_for_manifest_page(manifest_prefix, seq=seq)
+            query_type = "wildcard_fallback"
     else:
         page_boxes = es.get_boxes_for_manifest_page(manifest_id, seq=seq)
+        query_type = "manifest_wildcard"
 
     reprints = []
     seen_clusters = set()
@@ -896,9 +900,22 @@ def page_reprints(doc_id):
 
     reprints.sort(key=lambda r: (-r["cluster_count"], r["cluster_id"]))
 
-    resp = make_response(jsonify({"reprints": reprints}))
+    debug_info = {
+        "doc_id": doc_id,
+        "series": src.get('series'),
+        "date": src.get('date'),
+        "ed": src.get('ed'),
+        "requested_seq": seq,
+        "doc_own_p1seq": int(src.get('p1seq') or 0),
+        "query_type": query_type,
+        "total_boxes": len(page_boxes),
+        "box_seqs": [b["seq"] for b in page_boxes],
+        "box_clusters": [b.get("cluster") for b in page_boxes],
+    }
+
+    resp = make_response(jsonify({"reprints": reprints, "_debug": debug_info}))
     resp.headers["Access-Control-Allow-Origin"] = "*"
-    resp.headers["Cache-Control"] = "public, max-age=300"
+    resp.headers["Cache-Control"] = "no-cache"
     return resp
 
 
