@@ -736,7 +736,8 @@ def annotations_for_doc(doc_id):
     src         = document['_source']
     corpus      = src.get('corpus')
     manifest_id = src.get('id')
-    seq         = int(src.get('p1seq') or 0)
+    doc_own_seq = int(src.get('p1seq') or 0)
+    seq         = doc_own_seq
     page_image  = src.get('page_image')
     cluster_cur = src.get('cluster')
     cluster_url = f"https://clusters.viraltexts.org/cluster/{cluster_cur}"
@@ -799,8 +800,8 @@ def annotations_for_doc(doc_id):
         page_boxes = es.get_boxes_for_manifest_page(manifest_id, seq=seq)
 
     # Filter out documents whose page_image references a different physical page.
-    # Keep boxes that have no page_image (can't verify → benefit of the doubt).
-    if corpus.startswith(('ca', 'acdc')) and page_image:
+    # Only apply when viewing the document's own page (we have a reference image ID).
+    if corpus.startswith(('ca', 'acdc')) and page_image and seq == doc_own_seq:
         doc_image_id = _extract_iiif_image_id(page_image)
         if doc_image_id:
             page_boxes = [
@@ -888,7 +889,8 @@ def page_reprints(doc_id):
     src = document['_source']
     corpus = src.get('corpus')
     manifest_id = src.get('id')
-    seq = int(src.get('p1seq') or 0)
+    doc_own_seq = int(src.get('p1seq') or 0)
+    seq = doc_own_seq
 
     seq_param = request.args.get("seq")
     if seq_param is not None:
@@ -915,10 +917,10 @@ def page_reprints(doc_id):
         query_type = "manifest_wildcard"
 
     # Filter out documents whose page_image references a different physical page.
-    # Keep boxes that have no page_image (can't verify → benefit of the doubt).
+    # Only apply when viewing the document's own page (we have a reference image ID).
     unfiltered_count = len(page_boxes)
     doc_page_image = src.get('page_image')
-    if corpus.startswith(('ca', 'acdc')) and doc_page_image:
+    if corpus.startswith(('ca', 'acdc')) and doc_page_image and seq == doc_own_seq:
         doc_image_id = _extract_iiif_image_id(doc_page_image)
         if doc_image_id:
             page_boxes = [
@@ -960,7 +962,7 @@ def page_reprints(doc_id):
         "date": src.get('date'),
         "ed": src.get('ed'),
         "requested_seq": seq,
-        "doc_own_p1seq": int(src.get('p1seq') or 0),
+        "doc_own_p1seq": doc_own_seq,
         "query_type": query_type,
         "unfiltered_boxes": unfiltered_count,
         "total_boxes": len(page_boxes),
