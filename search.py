@@ -104,9 +104,11 @@ class Search:
         }
         resp = self.search(body=body)
         aggs = resp["aggregations"]
+        min_raw = aggs["min_date"].get("value_as_string")
+        max_raw = aggs["max_date"].get("value_as_string")
         return {
-            "min_date": aggs["min_date"].get("value_as_string"),
-            "max_date": aggs["max_date"].get("value_as_string"),
+            "min_date": min_raw[:10] if min_raw else None,
+            "max_date": max_raw[:10] if max_raw else None,
         }
 
     #no longer necessary. pulling data size data from metadata and reprints from aggs 2/25. keep in for a few cycles

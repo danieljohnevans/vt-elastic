@@ -78,7 +78,7 @@
             <div class="col-10">
                 <div class="row mb-3">
                     <div class="col-sm-auto my-auto">
-                        Showing results {{ from_ + 1 }}-{{ from_ + clusters_results|length }} out of {{ cluster_aggregation['Cluster'] | length }}.
+                        Showing clusters {{ from_ + 1 }}-{{ from_ + clusters_results|length }} of {{ cluster_aggregation['Cluster'] | length }} ({{ total }} total reprints).
                     </div>
                     {% if from_ > 0 %}
                         <div class="col-sm-auto my-auto">
@@ -171,7 +171,7 @@
                             <a href="{{ url_for('get_cluster', cluster_id=k, search_term=query) }}">
                                 <div class="d-flex justify-content-between align-items-center">
 
-                                    <h5 class="mb-0">{{ total_cluster_size }} reprints from {{ min_date }} to {{ max_date }}</h5> </a>
+                                    <h5 class="mb-0">{{ total_cluster_size }} reprints from {{ min_date[:10] if min_date else '' }} to {{ max_date[:10] if max_date else '' }}</h5> </a>
                                     <p class="mb-0"><b>Reprints matching search query:</b> {{ matching_doc_count }}</p>
                              </div> 
                            
@@ -179,7 +179,7 @@
                                         <p style="margin-top: 0rem;">
                                             
                                             <b>Source:</b> {{ entry.source }}
-                                            <br><b>Date:</b> {{ entry.date }}
+                                            <br><b>Date:</b> {{ entry.date[:10] if entry.date else '' }}
                                             {% if entry.highlight and open == "true" %}
                                             <br><b>Text:</b> 
                                             {{ entry.highlight.text | first | replace("\xad", "") | replace("\n", "<br>") | safe }}                                            
