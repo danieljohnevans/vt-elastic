@@ -1,4 +1,4 @@
-import re, requests
+import re, requests, urllib.parse
 from flask import Flask, render_template, request, Response, redirect, url_for, jsonify, make_response, abort
 
 from search import Search
