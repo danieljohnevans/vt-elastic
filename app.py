@@ -724,34 +724,35 @@ def annotations_for_doc(doc_id):
         except ValueError:
             pass
 
-    try:
-        if corpus == 'ia':
-            current_canvas_id, canvas_w, canvas_h = _ia_canvas_id_from_manifest(manifest_id, seq)
-        elif corpus.startswith(('ca', 'acdc')):
-            current_canvas_id, canvas_w, canvas_h = _loc_canvas_id_with_dims(
-                src.get('series'),
-                src.get('date'),
-                src.get('ed'),
-                seq
-            )
-        else:
-            abort(400, f"Unsupported corpus '{corpus}' for annotations")
-    except Exception as e:
-        # Fall back to canvas dimensions provided by the frontend
+    empty_resp = lambda: (lambda r: (r.headers.__setitem__("Access-Control-Allow-Origin", "*"), r)[1])(
+        make_response(jsonify({
+            "@context": "http://iiif.io/api/presentation/3/context.json",
+            "id": url_for("annotations_for_doc", doc_id=doc_id, _external=True),
+            "type": "AnnotationPage", "items": [],
+        }))
+    )
+
+    if corpus.startswith(('ca', 'acdc')):
+        # Use frontend-provided canvas dims — browser fetches LOC manifests reliably,
+        # server-side fetch often 403s or times out.
         if requested_canvas_id and request.args.get("canvas_w"):
             current_canvas_id = requested_canvas_id
             canvas_w = int(request.args.get("canvas_w", 0))
             canvas_h = int(request.args.get("canvas_h", 0))
         else:
-            empty = {
-                "@context": "http://iiif.io/api/presentation/3/context.json",
-                "id": url_for("annotations_for_doc", doc_id=doc_id, _external=True),
-                "type": "AnnotationPage",
-                "items": [],
-            }
-            resp = make_response(jsonify(empty))
-            resp.headers["Access-Control-Allow-Origin"] = "*"
-            return resp
+            return empty_resp()
+    elif corpus == 'ia':
+        try:
+            current_canvas_id, canvas_w, canvas_h = _ia_canvas_id_from_manifest(manifest_id, seq)
+        except Exception as e:
+            if requested_canvas_id and request.args.get("canvas_w"):
+                current_canvas_id = requested_canvas_id
+                canvas_w = int(request.args.get("canvas_w", 0))
+                canvas_h = int(request.args.get("canvas_h", 0))
+            else:
+                return empty_resp()
+    else:
+        abort(400, f"Unsupported corpus '{corpus}' for annotations")
 
     if requested_canvas_id:
         current_canvas_id = requested_canvas_id
@@ -763,9 +764,16 @@ def annotations_for_doc(doc_id):
         page_boxes = es.get_boxes_for_newspaper_page(
             src.get('series'), src.get('date'), src.get('ed'), seq
         )
+        print(f"[ANNO] structured query: series={src.get('series')} date={src.get('date')} "
+              f"ed={src.get('ed')} seq={seq} → {len(page_boxes)} boxes")
+        if not page_boxes:
+            # Fallback to p1iiif wildcard
+            p1iiif = src.get('p1iiif') or src.get('url') or ''
+            manifest_prefix = p1iiif.rsplit(':', 1)[0]
+            page_boxes = es.get_boxes_for_manifest_page(manifest_prefix, seq=seq)
+            print(f"[ANNO] wildcard fallback: prefix={manifest_prefix} → {len(page_boxes)} boxes")
     else:
         page_boxes = es.get_boxes_for_manifest_page(manifest_id, seq=seq)
-
 
     if page_image:
         print(f"[ANNO] page_image pct: {_parse_pct_from_page_image(page_image)}")
