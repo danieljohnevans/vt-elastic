@@ -79,9 +79,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   // LOC (Chronicling America) and acdc. might need others.
   const locManifestRaw = `{{ loc_manifest_url or '' }}`;
-  const locManifestUrl = locManifestRaw
-    ? `/loc-proxy?url=${encodeURIComponent(locManifestRaw)}`
-    : null;
+  const locManifestUrl = locManifestRaw || null;
 
   const manifestUrl = corpus === "ia" ? iaManifestUrl : locManifestUrl;
   if (!manifestUrl) return;
