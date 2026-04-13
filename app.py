@@ -756,18 +756,15 @@ def annotations_for_doc(doc_id):
     if requested_canvas_id:
         current_canvas_id = requested_canvas_id
 
-    if corpus.startswith(('ca', 'acdc')):
-        p1iiif = src.get('p1iiif') or src.get('url') or ''
-        manifest_prefix = p1iiif.rsplit(':', 1)[0] 
-    else:
-        manifest_prefix = manifest_id
-
-
     items = []
-    annos = []  
+    annos = []
 
-
-    page_boxes = es.get_boxes_for_manifest_page(manifest_prefix, seq=seq)
+    if corpus.startswith(('ca', 'acdc')):
+        page_boxes = es.get_boxes_for_newspaper_page(
+            src.get('series'), src.get('date'), src.get('ed'), seq
+        )
+    else:
+        page_boxes = es.get_boxes_for_manifest_page(manifest_id, seq=seq)
 
 
     if page_image:

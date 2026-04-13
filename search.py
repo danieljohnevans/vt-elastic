@@ -46,6 +46,45 @@ class Search:
         return resp["hits"]["total"]["value"]
         
     
+    def get_boxes_for_newspaper_page(self, series: str, date: str, ed: str, seq: int, size: int = 5000):
+        """
+        Return all bounding boxes for a specific newspaper page
+        identified by series, date, edition, and page sequence.
+        """
+        must = [
+            {"term": {"series.keyword": series}},
+            {"term": {"date": date}},
+            {"term": {"ed.keyword": str(ed)}},
+            {"term": {"p1seq": seq}},
+        ]
+
+        body = {
+            "query": {"bool": {"must": must}},
+            "_source": ["id", "p1seq", "p1x", "p1y", "p1w", "p1h", "p1width", "p1height", "cluster", "source"],
+            "size": size,
+            "sort": [
+                {"date": "asc"},
+                {"ref": "desc"}
+            ]
+        }
+        resp = self.search(body=body)
+        out = []
+        for hit in resp["hits"]["hits"]:
+            s = hit["_source"]
+            out.append({
+                "manifest_id": s.get("id"),
+                "seq":        int(s.get("p1seq") or 0),
+                "cluster":    s.get("cluster"),
+                "label":      s.get("source") or f"Cluster {s.get('cluster')}",
+                "x":          s.get("p1x"),
+                "y":          s.get("p1y"),
+                "w":          s.get("p1w"),
+                "h":          s.get("p1h"),
+                "img_w":      s.get("p1width"),
+                "img_h":      s.get("p1height"),
+            })
+        return out
+
     def get_boxes_for_manifest_page(self, manifest_id: str, seq: int | None = None, size: int = 5000):
         """
         Return all bounding boxes for records whose p1iiif contains the given manifest_id.
