@@ -770,6 +770,9 @@ def annotations_for_doc(doc_id):
     page_boxes = es.get_boxes_for_manifest_page(manifest_prefix, seq=seq)
 
 
+    if page_image:
+        print(f"[ANNO] page_image pct: {_parse_pct_from_page_image(page_image)}")
+
     if not page_boxes and page_image:
         pct = _parse_pct_from_page_image(page_image)
         if pct and canvas_w and canvas_h:
@@ -793,11 +796,21 @@ def annotations_for_doc(doc_id):
         if box.get("es_id"):
             cluster_url = f"{cluster_url}?focus={box['es_id']}"
 
+        img_w = box.get("img_w") or canvas_w
+        img_h = box.get("img_h") or canvas_h
+
+        sx = canvas_w / img_w if img_w else 1.0
+        sy = canvas_h / img_h if img_h else 1.0
+
+        print(f"[ANNO] box={box['x']},{box['y']},{box['w']},{box['h']} "
+              f"img={box.get('img_w')},{box.get('img_h')} "
+              f"canvas={canvas_w},{canvas_h} scale={sx:.4f},{sy:.4f}")
+
         coords = {
-            "x": (box["x"] / 100.0) * canvas_w,
-            "y": (box["y"] / 100.0) * canvas_h,
-            "w": (box["w"] / 100.0) * canvas_w,
-            "h": (box["h"] / 100.0) * canvas_h,
+            "x": box["x"] * sx,
+            "y": box["y"] * sy,
+            "w": box["w"] * sx,
+            "h": box["h"] * sy,
         }
 
         anno = make_annotation(
