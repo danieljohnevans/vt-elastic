@@ -181,6 +181,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         `/annotations/${docId}.json` +
         `?canvasId=${encodeURIComponent(canvasId)}` +
         `&seq=${seq}` +
+        `&canvas_w=${dims.width}&canvas_h=${dims.height}` +
         (clustersCsv ? `&clusters=${clustersCsv}` : '');
 
       instance.store.dispatch(

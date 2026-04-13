@@ -350,7 +350,9 @@ def loc_proxy():
         r.raise_for_status()
     except requests.exceptions.RequestException as e:
         status = getattr(e.response, "status_code", 502) if hasattr(e, "response") else 502
-        abort(status, f"LOC request failed: {e}")
+        resp = make_response(jsonify({"error": f"LOC request failed: {e}"}), status)
+        resp.headers["Access-Control-Allow-Origin"] = "*"
+        return resp
     resp = make_response(r.content)
     resp.headers["Content-Type"] = r.headers.get("Content-Type", "application/json")
     resp.headers["Access-Control-Allow-Origin"] = "*"
@@ -735,15 +737,21 @@ def annotations_for_doc(doc_id):
         else:
             abort(400, f"Unsupported corpus '{corpus}' for annotations")
     except Exception as e:
-        empty = {
-            "@context": "http://iiif.io/api/presentation/3/context.json",
-            "id": url_for("annotations_for_doc", doc_id=doc_id, _external=True),
-            "type": "AnnotationPage",
-            "items": [],
-        }
-        resp = make_response(jsonify(empty))
-        resp.headers["Access-Control-Allow-Origin"] = "*"
-        return resp
+        # Fall back to canvas dimensions provided by the frontend
+        if requested_canvas_id and request.args.get("canvas_w"):
+            current_canvas_id = requested_canvas_id
+            canvas_w = int(request.args.get("canvas_w", 0))
+            canvas_h = int(request.args.get("canvas_h", 0))
+        else:
+            empty = {
+                "@context": "http://iiif.io/api/presentation/3/context.json",
+                "id": url_for("annotations_for_doc", doc_id=doc_id, _external=True),
+                "type": "AnnotationPage",
+                "items": [],
+            }
+            resp = make_response(jsonify(empty))
+            resp.headers["Access-Control-Allow-Origin"] = "*"
+            return resp
 
     if requested_canvas_id:
         current_canvas_id = requested_canvas_id
