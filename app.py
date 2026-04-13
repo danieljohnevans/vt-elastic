@@ -592,6 +592,32 @@ def _parse_pct_from_page_image(url: str):
                 w=float(m.group(3)), h=float(m.group(4)))
 
 
+def _extract_iiif_image_id(page_image_url: str) -> str | None:
+    """
+    Extract the IIIF image identifier (page-specific segment) from a page_image URL.
+
+    URL formats:
+      tile.loc.gov/.../service:ndnp:...:0057/pct:.../full/0/default.jpg
+      chroniclingamerica.loc.gov/.../service%2F...%2F0033.jp2/pct:.../full/0/default.jpg
+
+    Returns e.g. "0057" or "0033".
+    """
+    if not page_image_url:
+        return None
+    parts = page_image_url.split("/pct:")
+    if len(parts) < 2:
+        return None
+    service_url = parts[0].rstrip("/")
+    last_segment = service_url.split("/")[-1]
+    last_segment = urllib.parse.unquote(last_segment)
+    # strip .jp2 or similar extension
+    last_segment = last_segment.split(".")[0]
+    # handle colon-separated (service:ndnp:...:0057) -> take after last colon
+    if ":" in last_segment:
+        last_segment = last_segment.rsplit(":", 1)[-1]
+    return last_segment if last_segment else None
+
+
 
 def _ia_canvas_id_from_manifest(manifest_id: str, seq: int):
     url = f"https://iiif.archive.org/iiif/3/{manifest_id}/manifest.json"
@@ -772,6 +798,15 @@ def annotations_for_doc(doc_id):
     else:
         page_boxes = es.get_boxes_for_manifest_page(manifest_id, seq=seq)
 
+    # Filter out documents whose page_image references a different physical page
+    if corpus.startswith(('ca', 'acdc')) and page_image:
+        doc_image_id = _extract_iiif_image_id(page_image)
+        if doc_image_id:
+            page_boxes = [
+                box for box in page_boxes
+                if _extract_iiif_image_id(box.get("page_image")) == doc_image_id
+            ]
+
     if not page_boxes and page_image:
         pct = _parse_pct_from_page_image(page_image)
         if pct and canvas_w and canvas_h:
@@ -789,6 +824,9 @@ def annotations_for_doc(doc_id):
             ))
 
     for i, box in enumerate(page_boxes, start=1):
+        if box.get("x") is None or box.get("y") is None or box.get("w") is None or box.get("h") is None:
+            continue
+
         cluster_id = box["cluster"]
         cluster_count = es.get_cluster_count(cluster_id)
         cluster_url = url_for('get_cluster', cluster_id=cluster_id, _external=True)
@@ -859,6 +897,7 @@ def page_reprints(doc_id):
 
     page_boxes = []
     query_type = "none"
+    unfiltered_count = 0
     if corpus.startswith(('ca', 'acdc')):
         page_boxes = es.get_boxes_for_newspaper_page(
             src.get('series'), src.get('date'), src.get('ed'), seq
@@ -872,6 +911,17 @@ def page_reprints(doc_id):
     else:
         page_boxes = es.get_boxes_for_manifest_page(manifest_id, seq=seq)
         query_type = "manifest_wildcard"
+
+    # Filter out documents whose page_image references a different physical page
+    unfiltered_count = len(page_boxes)
+    doc_page_image = src.get('page_image')
+    if corpus.startswith(('ca', 'acdc')) and doc_page_image:
+        doc_image_id = _extract_iiif_image_id(doc_page_image)
+        if doc_image_id:
+            page_boxes = [
+                box for box in page_boxes
+                if _extract_iiif_image_id(box.get("page_image")) == doc_image_id
+            ]
 
     reprints = []
     seen_clusters = set()
@@ -908,7 +958,10 @@ def page_reprints(doc_id):
         "requested_seq": seq,
         "doc_own_p1seq": int(src.get('p1seq') or 0),
         "query_type": query_type,
+        "unfiltered_boxes": unfiltered_count,
         "total_boxes": len(page_boxes),
+        "filtered_out": unfiltered_count - len(page_boxes),
+        "page_image_id": _extract_iiif_image_id(src.get('page_image')),
         "box_seqs": [b["seq"] for b in page_boxes],
         "box_clusters": [b.get("cluster") for b in page_boxes],
     }

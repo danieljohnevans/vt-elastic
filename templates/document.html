@@ -279,6 +279,22 @@ document.addEventListener("DOMContentLoaded", async function () {
               instance.store.dispatch(
                 Mirador.actions.selectAnnotation(windowId, item.id)
               );
+              // Zoom to the annotation bounding box
+              const xywh = (item.target || '').split('#xywh=')[1];
+              if (xywh) {
+                const [bx, by, bw, bh] = xywh.split(',').map(Number);
+                if (bw > 0 && bh > 0) {
+                  const center = { x: bx + bw / 2, y: by + bh / 2 };
+                  const zoom = 1.0 / Math.max(bw, bh);
+                  setTimeout(() => {
+                    instance.store.dispatch(
+                      Mirador.actions.updateViewport(windowId, {
+                        x: center.x, y: center.y, zoom: zoom
+                      })
+                    );
+                  }, 300);
+                }
+              }
               return;
             }
           }

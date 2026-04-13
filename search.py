@@ -61,7 +61,8 @@ class Search:
         body = {
             "query": {"bool": {"must": must}},
             "_source": ["id", "p1seq", "p1x", "p1y", "p1w", "p1h", "p1width", "p1height",
-                        "cluster", "source", "date", "placeOfPublication", "open", "text"],
+                        "cluster", "source", "date", "placeOfPublication", "open", "text",
+                        "page_image"],
             "size": size,
             "sort": [
                 {"date": "asc"},
@@ -88,6 +89,7 @@ class Search:
                 "place":      s.get("placeOfPublication"),
                 "open":       s.get("open"),
                 "text":       s.get("text"),
+                "page_image": s.get("page_image"),
             })
         return out
 
@@ -113,7 +115,8 @@ class Search:
         body = {
             "query": {"bool": {"must": must}},
             "_source": ["id", "p1seq", "p1x", "p1y", "p1w", "p1h", "p1width", "p1height",
-                        "cluster", "source", "date", "placeOfPublication", "open", "text"],
+                        "cluster", "source", "date", "placeOfPublication", "open", "text",
+                        "page_image"],
             "size": size,
             "sort": [
                 {"date": "asc"},
@@ -140,6 +143,7 @@ class Search:
                 "place":      s.get("placeOfPublication"),
                 "open":       s.get("open"),
                 "text":       s.get("text"),
+                "page_image": s.get("page_image"),
             })
         return out
 
