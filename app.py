@@ -793,17 +793,11 @@ def annotations_for_doc(doc_id):
         if box.get("es_id"):
             cluster_url = f"{cluster_url}?focus={box['es_id']}"
 
-        img_w = box.get("img_w") or canvas_w
-        img_h = box.get("img_h") or canvas_h
-
-        sx = canvas_w / img_w if img_w else 1.0
-        sy = canvas_h / img_h if img_h else 1.0
-
         coords = {
-            "x": box["x"] * sx,
-            "y": box["y"] * sy,
-            "w": box["w"] * sx,
-            "h": box["h"] * sy,
+            "x": (box["x"] / 100.0) * canvas_w,
+            "y": (box["y"] / 100.0) * canvas_h,
+            "w": (box["w"] / 100.0) * canvas_w,
+            "h": (box["h"] / 100.0) * canvas_h,
         }
 
         anno = make_annotation(
