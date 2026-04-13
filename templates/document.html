@@ -43,13 +43,13 @@
         
         {% elif corpus.startswith('ia') %}
   <div class="row" id="viewer-row">
-    <div class="col-md-4" id="reprints-panel" style="max-height: 85vh; overflow-y: auto;">
+    <div class="col-md-3" id="reprints-panel" style="max-height: 85vh; overflow-y: auto;">
       <h5>Reprints on this page</h5>
       <div id="reprints-list">
         <p class="text-muted">Loading...</p>
       </div>
     </div>
-    <div class="col-md-8">
+    <div class="col-md-9">
       <div id="ia-mirador"></div>
     </div>
   </div>
@@ -57,13 +57,13 @@
 {% elif corpus.startswith('ca') or corpus.startswith('acdc'):
  %}
   <div class="row" id="viewer-row">
-    <div class="col-md-4" id="reprints-panel" style="max-height: 85vh; overflow-y: auto;">
+    <div class="col-md-3" id="reprints-panel" style="max-height: 85vh; overflow-y: auto;">
       <h5>Reprints on this page</h5>
       <div id="reprints-list">
         <p class="text-muted">Loading...</p>
       </div>
     </div>
-    <div class="col-md-8">
+    <div class="col-md-9">
       <div id="ca-mirador"></div>
     </div>
   </div>
@@ -225,6 +225,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           const card = document.createElement('div');
           card.className = 'card mb-2';
           card.style.cursor = 'pointer';
+          card.dataset.clusterId = r.cluster_id;
 
           const dateStr = r.date || '';
           const placeStr = r.place || '';
@@ -247,11 +248,40 @@ document.addEventListener("DOMContentLoaded", async function () {
               <a href="${r.cluster_url}" class="small">Browse ${r.cluster_count} reprints in cluster &rarr;</a>
             </div>
           `;
+
+          card.addEventListener('click', (e) => {
+            if (e.target.tagName === 'A') return; // let links work normally
+            listEl.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            highlightAnnotationForCluster(r.cluster_id);
+          });
+
           listEl.appendChild(card);
         });
       } catch (e) {
         console.error('Failed to load reprints:', e);
         listEl.innerHTML = '<p class="text-danger">Failed to load reprints.</p>';
+      }
+    }
+
+    function highlightAnnotationForCluster(clusterId) {
+      const state = instance.store.getState();
+      const annos = state.annotations || {};
+      const clusterStr = String(clusterId);
+
+      for (const [canvasId, annoData] of Object.entries(annos)) {
+        for (const [annoPageUrl, pageData] of Object.entries(annoData || {})) {
+          const items = pageData?.json?.items || [];
+          for (const item of items) {
+            const bodyTexts = (item.body || []).map(b => b.value || '').join(' ');
+            if (bodyTexts.includes(`Cluster ${clusterStr}`)) {
+              instance.store.dispatch(
+                Mirador.actions.selectAnnotation(windowId, item.id)
+              );
+              return;
+            }
+          }
+        }
       }
     }
 
@@ -323,6 +353,10 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
   #reprints-panel .card:hover {
     background-color: #f8f9fa;
+  }
+  #reprints-panel .card.active {
+    border-left-color: #dc3545;
+    background-color: #fff3cd;
   }
 </style>
 
