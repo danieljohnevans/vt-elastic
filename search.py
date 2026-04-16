@@ -23,9 +23,7 @@ class Search:
             request_timeout=60
         )
 
-        client_info = self.es.info()
-        print('Connected to Elasticsearch!')
-        pprint(client_info.body)
+        print(f'Elasticsearch client configured for {es_host}')
 
     
     def search(self,  **query_args,):

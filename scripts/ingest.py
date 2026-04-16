@@ -36,7 +36,11 @@ def gendata(filename:str):
                 print(f"Total time: {tock - grand_tick}. Input rate: {record_count / (tock - grand_tick).total_seconds()} hertz.")
                 tick = tock
 
-            doc = json.loads(l)
+            try:
+                doc = json.loads(l)
+            except json.JSONDecodeError as e:
+                print(f"Skipping bad JSON on line {record_count}: {e}")
+                continue
             doc['source_file'] = filename
             uid_str = str(doc["uid"])
             begin_str = str(doc.get("begin", ""))
