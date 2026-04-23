@@ -80,7 +80,7 @@ for filename in os.listdir(data_dir):
         print(f"Processing {filename}...")
         full_path = os.path.join(data_dir, filename)
         try:
-            (success, info) = bulk(es, gendata(full_path), max_retries=4)
+            (success, info) = bulk(es, gendata(full_path), max_retries=4, request_timeout=300)
             shutil.move(full_path, os.path.join(processed_directory, filename))
             print(f"Processed {filename} with success={success} and info={info}")
 
