@@ -122,6 +122,13 @@ def handle_search():
         }
         })
 
+    if 'id' in filters:
+        search_query['bool']['filter'].append({
+            "term": {
+                "id.keyword": filters['id']
+            }
+        })
+
     if 'year' in filters:
         year = filters['year']
         search_query['bool']['filter'].append({
@@ -569,6 +576,10 @@ def extract_filters(query):
     if cluster_match:
         filters['cluster'] = int(cluster_match.group(1))
 
+    id_match = re.search(r'id:"([^"]+)"|id:(\S+)', query)
+    if id_match:
+        filters['id'] = id_match.group(1) or id_match.group(2)
+
     parsed_query = query
     if 'location' in filters:
         parsed_query = re.sub(r"location:'[^']*'", '', parsed_query)
@@ -576,6 +587,8 @@ def extract_filters(query):
         parsed_query = re.sub(r"\s*year:\d{4}\s*", ' ', parsed_query)
     if 'cluster' in filters:
         parsed_query = re.sub(r"'cluster:'(\d+)", ' ', parsed_query)
+    if 'id' in filters:
+        parsed_query = re.sub(r'id:"[^"]+"|id:\S+', '', parsed_query)
 
     parsed_query = parsed_query.strip()
     parsed_query = re.sub(r'\s+(AND|OR)\s+$', '', parsed_query)
