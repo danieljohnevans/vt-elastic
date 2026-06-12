@@ -143,12 +143,10 @@ def handle_search():
     results = es.search(
         body={
             "query": search_query,
-            "_source": ["cluster", "source", "date", "open", "size", "city", "dateRange"],
             'aggs': {
                 'category-agg': {
                     'terms': {
                         'field': 'topdiv.keyword',
-                        # 'order': { "_count": "desc" }
                     }
                 },
                 'year-agg': {
@@ -156,17 +154,31 @@ def handle_search():
                         'field': 'date',
                         'calendar_interval': 'year',
                         'format': 'yyyy',
-                        # 'order': { "_count": "desc" } 
                     }
                 },
                 'cluster-agg': {
                     'terms': {
                         'field': 'cluster',
-                        
-                        'size': 100, 
-                        'include': {  
-                            'partition': from_ // 50, 
-                            'num_partitions': 10 
+                        'size': 100,
+                        'include': {
+                            'partition': from_ // 50,
+                            'num_partitions': 10
+                        }
+                    },
+                    'aggs': {
+                        'rep_doc': {
+                            'top_hits': {
+                                'size': 1,
+                                '_source': ["cluster", "source", "date", "open", "size", "city", "dateRange"],
+                                'highlight': {
+                                    'fields': {
+                                        'text': {
+                                            "pre_tags": ["<b>"], "post_tags": ["</b>"],
+                                            'fragment_size': 250
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 },
@@ -183,16 +195,7 @@ def handle_search():
                     }
                 }
             },
-            'size': 8700, 
-            'from': from_, 
-            'highlight': {
-                'fields': {
-                    'text': {
-                        "pre_tags": ["<b>"], "post_tags": ["</b>"],
-                        'fragment_size': 250
-                    }
-                }
-            },
+            'size': 0,
         }
     )
 
@@ -221,45 +224,43 @@ def handle_search():
     # print(aggs)
 
     clusters_results = {}
-    for hit in results['hits']['hits']:
-        cluster = hit['_source'].get('cluster', None)
-        if cluster and cluster in cluster_aggregation['Cluster']:
-            source = hit['_source'].get('source', None)
-            date = hit['_source'].get('date', None)
-            open = hit['_source'].get('open', None)
-            doc_count = hit['_source'].get('size', None)
-            city = hit['_source'].get('city', None)
-            date_range = hit['_source'].get('dateRange', None)
-            if 'highlight' in hit:
-                highlight = hit['highlight']
-            else:
-                highlight = {}
+    for bucket in results['aggregations']['cluster-agg']['buckets']:
+        cluster = bucket['key']
+        if cluster not in cluster_aggregation['Cluster']:
+            continue
+        rep_hits = bucket.get('rep_doc', {}).get('hits', {}).get('hits', [])
+        if not rep_hits:
+            continue
+        hit = rep_hits[0]
+        src = hit.get('_source', {})
+        source = src.get('source', None)
+        date = src.get('date', None)
+        open = src.get('open', None)
+        doc_count = src.get('size', None)
+        city = src.get('city', None)
+        date_range = src.get('dateRange', None)
+        highlight = hit.get('highlight', {})
 
-            if date_range:
-                try:
-                    min_year, max_year = map(int, date_range.split('/')) 
-                except ValueError:
-                    min_year, max_year = None, None 
-            else:
-                min_year, max_year = None, None  
+        if date_range:
+            try:
+                min_year, max_year = map(int, date_range.split('/'))
+            except ValueError:
+                min_year, max_year = None, None
+        else:
+            min_year, max_year = None, None
 
-
-            if cluster not in clusters_results:
-                clusters_results[cluster] = []
-
-            clusters_results[cluster].append({
-                'source': source,
-                'highlight': highlight,
-                'date': date,
-                'count': cluster_aggregation['Cluster'][cluster]['doc_count'],
-                'open': open,
-                'doc_count': doc_count,
-                'date_range': date_range,
-                'min_year': min_year,
-                'max_year': max_year,
-                'city': city
-
-            })
+        clusters_results.setdefault(cluster, []).append({
+            'source': source,
+            'highlight': highlight,
+            'date': date,
+            'count': cluster_aggregation['Cluster'][cluster]['doc_count'],
+            'open': open,
+            'doc_count': doc_count,
+            'date_range': date_range,
+            'min_year': min_year,
+            'max_year': max_year,
+            'city': city
+        })
 
     #sort based on cluster count
     clusters_results = dict(
