@@ -20,7 +20,7 @@ class Search:
             basic_auth=(es_user, es_password),
             verify_certs=False,
             ssl_show_warn=False,
-            request_timeout=60
+            request_timeout=120
         )
 
         print(f'Elasticsearch client configured for {es_host}')

@@ -143,6 +143,7 @@ def handle_search():
     results = es.search(
         body={
             "query": search_query,
+            "_source": ["cluster", "source", "date", "open", "size", "city", "dateRange"],
             'aggs': {
                 'category-agg': {
                     'terms': {
