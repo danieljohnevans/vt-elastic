@@ -1003,6 +1003,18 @@ def add_cors_headers(resp):
 def about():
     return render_template('about.html')
 
+
+@app.route('/robots.txt')
+def robots_txt():
+    body = (
+        "User-agent: *\n"
+        "Disallow: /annotations/\n"
+        "Disallow: /page-reprints/\n"
+        "Disallow: /loc-proxy\n"
+        "Crawl-delay: 5\n"
+    )
+    return Response(body, mimetype="text/plain")
+
 if __name__ == '__main__':
     # app.run(debug=True)
     app.run()
