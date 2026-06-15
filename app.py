@@ -464,11 +464,26 @@ def get_document(id):
 
 
 
-@app.get('/cluster/<cluster_id>')
+@app.get('/cluster/<path:cluster_id>')
 def get_cluster(cluster_id):
 
 
     search_term = request.args.get('search_term', '')
+
+    if not cluster_id.isdigit():
+        lookup = es.search(body={
+            "query": {"term": {"id.keyword": cluster_id}},
+            "_source": ["cluster"],
+            "size": 1,
+        })
+        lookup_hits = lookup.get("hits", {}).get("hits", [])
+        if not lookup_hits:
+            abort(404)
+        resolved = lookup_hits[0]["_source"].get("cluster")
+        if resolved is None:
+            abort(404)
+        cluster_id = str(resolved)
+
     cluster = es.retrieve_cluster(cluster_id, search_term)
 
     if search_term.startswith('"') and search_term.endswith('"'):
@@ -1002,18 +1017,6 @@ def add_cors_headers(resp):
 @app.route('/about')
 def about():
     return render_template('about.html')
-
-
-@app.route('/robots.txt')
-def robots_txt():
-    body = (
-        "User-agent: *\n"
-        "Disallow: /annotations/\n"
-        "Disallow: /page-reprints/\n"
-        "Disallow: /loc-proxy\n"
-        "Crawl-delay: 5\n"
-    )
-    return Response(body, mimetype="text/plain")
 
 if __name__ == '__main__':
     # app.run(debug=True)
