@@ -159,11 +159,8 @@ def handle_search():
                 'cluster-agg': {
                     'terms': {
                         'field': 'cluster',
-                        'size': 100,
-                        'include': {
-                            'partition': from_ // 50,
-                            'num_partitions': 10
-                        }
+                        'size': 500,
+                        'order': {'_count': 'desc'},
                     },
                     'aggs': {
                         'rep_doc': {
