@@ -312,15 +312,34 @@ def handle_search():
     }
 
 
-        ##### get min_date and max_date via aggregation (no docs fetched)
+        ##### get min_date and max_date in a single aggregation across all clusters on the page
     cluster_date_info = {}
-    for key in clusters_results:
-        cluster_date_info[key] = es.get_cluster_date_range(key)
-    
+    if clusters_results:
+        cluster_keys = list(clusters_results.keys())
+        date_resp = es.search(body={
+            "size": 0,
+            "query": {"terms": {"cluster": cluster_keys}},
+            "aggs": {
+                "by_cluster": {
+                    "terms": {"field": "cluster", "size": len(cluster_keys)},
+                    "aggs": {
+                        "min_date": {"min": {"field": "date"}},
+                        "max_date": {"max": {"field": "date"}},
+                    }
+                }
+            }
+        })
+        for bucket in date_resp.get("aggregations", {}).get("by_cluster", {}).get("buckets", []):
+            min_raw = bucket["min_date"].get("value_as_string")
+            max_raw = bucket["max_date"].get("value_as_string")
+            cluster_date_info[bucket["key"]] = {
+                "min_date": min_raw[:10] if min_raw else None,
+                "max_date": max_raw[:10] if max_raw else None,
+            }
 
     for key in clusters_results:
         cluster_data = clusters_results[key]
-        date_info = cluster_date_info[key]
+        date_info = cluster_date_info.get(key, {"min_date": None, "max_date": None})
 
         for entry in cluster_data:
             entry['min_date'] = date_info['min_date']
@@ -504,19 +523,8 @@ def get_cluster(cluster_id):
         date = [document.get('date', '') for document in cluster]
         open= [document.get('open', '') for document in cluster]
         corpus = [document.get('corpus', '') for document in cluster]
-        cluster= [document.get('cluster', '') for document in cluster]
-
-
-        search_query = {"match": {"cluster": cluster[-1]}}
-        first = es.search(query=search_query)
-        hits_count = first['hits']['total']['value']
-        size = hits_count
-        searching_by_cluster = es.search(query=search_query, size=size, sort=[
-        {"date": "asc"},
-        {"ref": "desc"}
-    ])
-        searching_by_cluster = searching_by_cluster['hits']
-        uid = [hit['_id'] for hit in searching_by_cluster['hits']]
+        uid = [document.get('_es_id', '') for document in cluster]
+        cluster = [document.get('cluster', '') for document in cluster]
 
         ca_images = []
             # to convert chron am image urls

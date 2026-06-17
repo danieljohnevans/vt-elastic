@@ -44,7 +44,7 @@ class Search:
         return resp["hits"]["total"]["value"]
         
     
-    def get_boxes_for_newspaper_page(self, series: str, date: str, ed: str, seq: int, size: int = 5000):
+    def get_boxes_for_newspaper_page(self, series: str, date: str, ed: str, seq: int, size: int = 100):
         """
         Return all bounding boxes for a specific newspaper page
         identified by series, date, edition, and page sequence.
@@ -91,7 +91,7 @@ class Search:
             })
         return out
 
-    def get_boxes_for_manifest_page(self, manifest_id: str, seq: int | None = None, size: int = 5000):
+    def get_boxes_for_manifest_page(self, manifest_id: str, seq: int | None = None, size: int = 100):
         """
         Return all bounding boxes for records whose p1iiif contains the given manifest_id.
         If seq is provided, restrict to that page (p1seq).
@@ -164,40 +164,29 @@ class Search:
             "max_date": max_raw[:10] if max_raw else None,
         }
 
-    #no longer necessary. pulling data size data from metadata and reprints from aggs 2/25. keep in for a few cycles
     def retrieve_cluster(self, cluster_value, search_term):
-
-        query = {
-            "query": {
-                "match": {
-                    "cluster": cluster_value
-                }
-            },
+        body = {
+            "query": {"match": {"cluster": cluster_value}},
+            "_source": [
+                "page_image", "coverage", "url", "source", "text",
+                "placeOfPublication", "date", "open", "corpus", "cluster"
+            ],
             "highlight": {
                 "fields": {
-                    'text': { "pre_tags" : ["<b>"], "post_tags" : ["</b>"]}
+                    "text": {"pre_tags": ["<b>"], "post_tags": ["</b>"]}
                 }
             },
-            "sort": [
-            {"date": "asc"}, 
-            {"ref": "desc"}   
-        ]
+            "sort": [{"date": "asc"}, {"ref": "desc"}],
+            "size": 5000,
+            "track_total_hits": True,
         }
-
-
-
-    #     # run query twice. first is to get size of hit_count then again w dynamically updated size
-        
-        result = self.es.search(index='viral-texts', body=query)
-        hits_count = result['hits']['total']['value']
-        size = hits_count
-        result = self.es.search(index='viral-texts', body=query, size=size)
-
-        #only returns first item else returns none
-        if result['hits']['total']['value'] > 0:
-            return [hit['_source'] for hit in result['hits']['hits']]
-        else:
-            return None
+        result = self.es.search(index="viral-texts", body=body)
+        if result["hits"]["total"]["value"] > 0:
+            return [
+                {**hit["_source"], "_es_id": hit["_id"]}
+                for hit in result["hits"]["hits"]
+            ]
+        return None
         
     def scroll(self, scroll_id, scroll):
         return self.es.scroll(scroll_id=scroll_id, scroll=scroll)
