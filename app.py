@@ -80,7 +80,7 @@ def handle_search():
     
     data = request.args if request.method == 'GET' else request.form
 
-    query   = data.get('query', '')
+    query   = _normalize_quotes(data.get('query', ''))
     from_   = data.get('from_', type=int) or 0
     sort_by = data.get('sort_by', 'count')
 
@@ -484,7 +484,7 @@ def get_document(id):
 def get_cluster(cluster_id):
 
 
-    search_term = request.args.get('search_term', '')
+    search_term = _normalize_quotes(request.args.get('search_term', ''))
 
     if not cluster_id.isdigit():
         lookup = es.search(body={
@@ -582,6 +582,17 @@ def csv_generator(data):
     yield csv_buffer.read()
 
     
+_SMART_QUOTE_MAP = str.maketrans({
+    "“": '"', "”": '"', "„": '"', "‟": '"',
+    "‘": "'", "’": "'", "‚": "'", "‛": "'",
+    "«": '"', "»": '"',
+})
+
+
+def _normalize_quotes(s: str) -> str:
+    return s.translate(_SMART_QUOTE_MAP) if s else s
+
+
 def extract_filters(query):
     filters = {}
 
