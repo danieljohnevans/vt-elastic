@@ -140,6 +140,13 @@ def handle_search():
             }
         })
 
+    PAGE_SIZE = 20
+    MAX_CLUSTERS = 10000
+
+    # ---- Phase 1: cheap aggregations -------------------------------------
+    # Facets + the FULL list of matching clusters (key, matching count, total
+    # cluster size, date range) with NO per-cluster highlighting. This lets us
+    # sort and paginate across every matching cluster, not just the top N.
     results = es.search(
         body={
             "query": search_query,
@@ -156,34 +163,16 @@ def handle_search():
                         'format': 'yyyy',
                     }
                 },
-                'cluster-agg': {
-                    'terms': {
-                        'field': 'cluster',
-                        'size': 200,
-                        'order': {'_count': 'desc'},
-                    },
-                    'aggs': {
-                        'rep_doc': {
-                            'top_hits': {
-                                'size': 1,
-                                '_source': ["cluster", "source", "date", "open", "size", "city", "dateRange"],
-                                'highlight': {
-                                    'fields': {
-                                        'text': {
-                                            "pre_tags": ["<b>"], "post_tags": ["</b>"],
-                                            'fragment_size': 250
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
                 'cluster-count': {
                     'terms': {
                         'field': 'cluster',
                         "order": { "_count": "desc" },
-                        'size': 10000
+                        'size': MAX_CLUSTERS
+                    },
+                    'aggs': {
+                        'total_size': {'max': {'field': 'size'}},
+                        'min_date': {'min': {'field': 'date'}},
+                        'max_date': {'max': {'field': 'date'}},
                     }
                 },
                 'total-clusters': {
@@ -200,7 +189,7 @@ def handle_search():
     'Location': {
         bucket['key']: bucket['doc_count']
         for bucket in sorted(results['aggregations']['category-agg']['buckets'], key=lambda x: x['key'])
-    }, 
+    },
     'Year': {
         bucket['key_as_string']: bucket['doc_count']
         for bucket in results['aggregations']['year-agg']['buckets']
@@ -208,117 +197,94 @@ def handle_search():
     }
     }
 
-    cluster_aggregation = { 'Cluster': {
-        bucket['key']: {'doc_count': bucket['doc_count']}
-        for bucket in results['aggregations']['cluster-count']['buckets']
-    },}
+    # Per-cluster metadata for every matching cluster (used to sort/paginate).
+    cluster_meta = {}
+    for bucket in results['aggregations']['cluster-count']['buckets']:
+        cid = bucket['key']
+        min_raw = bucket['min_date'].get('value_as_string')
+        max_raw = bucket['max_date'].get('value_as_string')
+        cluster_meta[cid] = {
+            'doc_count': bucket['doc_count'],                          # matching reprints
+            'total_size': int(bucket['total_size'].get('value') or 0),  # total reprints in cluster
+            'min_date': min_raw[:10] if min_raw else None,
+            'max_date': max_raw[:10] if max_raw else None,
+        }
 
+    cluster_aggregation = {'Cluster': {
+        cid: {'doc_count': m['doc_count']} for cid, m in cluster_meta.items()
+    }}
     sorted_cluster = sorted(cluster_aggregation['Cluster'].items(), key=lambda x: x[1]['doc_count'], reverse=True)
 
-    clusters_data = results['aggregations']['cluster-agg']['buckets']
-    clusters_data = clusters_data[from_:from_ + 50]
+    # ---- Order the full cluster list, then paginate ----------------------
+    def _year(value):
+        return int(value[:4]) if value else float('inf')
 
-    # print(aggs)
-
-    clusters_results = {}
-    for bucket in results['aggregations']['cluster-agg']['buckets']:
-        cluster = bucket['key']
-        if cluster not in cluster_aggregation['Cluster']:
-            continue
-        rep_hits = bucket.get('rep_doc', {}).get('hits', {}).get('hits', [])
-        if not rep_hits:
-            continue
-        hit = rep_hits[0]
-        src = hit.get('_source', {})
-        source = src.get('source', None)
-        date = src.get('date', None)
-        open = src.get('open', None)
-        doc_count = src.get('size', None)
-        city = src.get('city', None)
-        date_range = src.get('dateRange', None)
-        highlight = hit.get('highlight', {})
-
-        if date_range:
-            try:
-                min_year, max_year = map(int, date_range.split('/'))
-            except ValueError:
-                min_year, max_year = None, None
-        else:
-            min_year, max_year = None, None
-
-        clusters_results.setdefault(cluster, []).append({
-            'source': source,
-            'highlight': highlight,
-            'date': date,
-            'count': cluster_aggregation['Cluster'][cluster]['doc_count'],
-            'open': open,
-            'doc_count': doc_count,
-            'date_range': date_range,
-            'min_year': min_year,
-            'max_year': max_year,
-            'city': city
-        })
-
-    #sort based on cluster count
-    clusters_results = dict(
-        sorted(clusters_results.items(), key=lambda item: item[1][0]['count'], reverse=True)
-    )
-
-    # print(clusters_results)
-
-    sorted_clusters_list = sorted(cluster_aggregation['Cluster'].items(), key=lambda item: item[1]['doc_count'], reverse=True)
-
-    # print(sorted_clusters_list)
-
-    # Sort clusters w info by count in descending order
-    sorted_clusters_list = sorted(clusters_results.items(), key=lambda item: item[1][0]['count'], reverse=True)
-    # print(sorted_clusters_list)
-
+    items = list(cluster_meta.items())
     if sort_by == "min_year":
-        sorted_clusters_list = sorted(
-            clusters_results.items(), 
-            key=lambda item: item[1][0]['min_year'] if item[1][0]['min_year'] is not None else float('inf')
-        )   
+        items.sort(key=lambda kv: _year(kv[1]['min_date']))
     elif sort_by == "max_year":
-            sorted_clusters_list = sorted(
-                clusters_results.items(), 
-                key=lambda item: item[1][0]['max_year'] if item[1][0]['max_year'] is not None else float('inf')
-            )    
-    elif sort_by == "desc_count":
-        sorted_clusters_list = sorted(sorted_clusters_list, key=lambda item: item[1][0]['count'], reverse=True)
+        items.sort(key=lambda kv: _year(kv[1]['max_date']))
     elif sort_by == "asc_count":
-        sorted_clusters_list = sorted(sorted_clusters_list, key=lambda item: item[1][0]['count'], reverse=False)
+        items.sort(key=lambda kv: kv[1]['doc_count'])
     elif sort_by == "desc_cluster":
-        sorted_clusters_list = sorted(sorted_clusters_list, key=lambda item: item[1][0]['doc_count'], reverse=True)
+        items.sort(key=lambda kv: kv[1]['total_size'], reverse=True)
     elif sort_by == "asc_cluster":
-        sorted_clusters_list = sorted(sorted_clusters_list, key=lambda item: item[1][0]['doc_count'], reverse=False)
+        items.sort(key=lambda kv: kv[1]['total_size'])
+    else:  # "count" / "desc_count" / default
+        items.sort(key=lambda kv: kv[1]['doc_count'], reverse=True)
 
-    # Apply slicing for pagination
-    clusters_results = dict(sorted_clusters_list[from_:from_ + 20])
-    
-    # print("Unique clusters returned:", len(clusters_results))
-    # print(paginated_clusters)
+    page_items = items[from_:from_ + PAGE_SIZE]
+    page_keys = [cid for cid, _ in page_items]
 
-    clusters = {
-        'Cluster': {
-            bucket['key']: {
-                'doc_count': bucket['doc_count']
+    # ---- Phase 2: highlighted representative hit for THIS page only -------
+    # Constant cost regardless of how deep the user paginates.
+    rep_by_cluster = {}
+    if page_keys:
+        rep_query = {
+            "bool": {
+                "must": search_query['bool']['must'] or [{"match_all": {}}],
+                "filter": search_query['bool']['filter'] + [{"terms": {"cluster": page_keys}}],
             }
-            for bucket in results['aggregations']['cluster-agg']['buckets']
-        },
-    }
-
-
-        ##### get min_date and max_date in a single aggregation across all clusters on the page
-    cluster_date_info = {}
-    if clusters_results:
-        cluster_keys = list(clusters_results.keys())
-        date_resp = es.search(body={
+        }
+        rep_resp = es.search(body={
+            "query": rep_query,
             "size": 0,
-            "query": {"terms": {"cluster": cluster_keys}},
             "aggs": {
                 "by_cluster": {
-                    "terms": {"field": "cluster", "size": len(cluster_keys)},
+                    "terms": {"field": "cluster", "size": len(page_keys)},
+                    "aggs": {
+                        "rep_doc": {
+                            "top_hits": {
+                                "size": 1,
+                                "_source": ["cluster", "source", "date", "open", "size", "city", "dateRange"],
+                                "highlight": {
+                                    "fields": {
+                                        "text": {
+                                            "pre_tags": ["<b>"], "post_tags": ["</b>"],
+                                            "fragment_size": 250
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        for bucket in rep_resp['aggregations']['by_cluster']['buckets']:
+            hits = bucket.get('rep_doc', {}).get('hits', {}).get('hits', [])
+            if hits:
+                rep_by_cluster[bucket['key']] = hits[0]
+
+    # Whole-cluster date range (ignores the text query) for display, page only.
+    cluster_date_info = {}
+    if page_keys:
+        date_resp = es.search(body={
+            "size": 0,
+            "query": {"terms": {"cluster": page_keys}},
+            "aggs": {
+                "by_cluster": {
+                    "terms": {"field": "cluster", "size": len(page_keys)},
                     "aggs": {
                         "min_date": {"min": {"field": "date"}},
                         "max_date": {"max": {"field": "date"}},
@@ -334,19 +300,29 @@ def handle_search():
                 "max_date": max_raw[:10] if max_raw else None,
             }
 
-    for key in clusters_results:
-        cluster_data = clusters_results[key]
-        date_info = cluster_date_info.get(key, {"min_date": None, "max_date": None})
+    # ---- Build the ordered results dict for this page --------------------
+    clusters_results = {}
+    for cid, meta in page_items:
+        hit = rep_by_cluster.get(cid, {})
+        src = hit.get('_source', {})
+        dates = cluster_date_info.get(cid, {"min_date": meta['min_date'], "max_date": meta['max_date']})
+        clusters_results[cid] = [{
+            'source': src.get('source'),
+            'highlight': hit.get('highlight', {}),
+            'date': src.get('date'),
+            'count': meta['doc_count'],
+            'open': src.get('open'),
+            'doc_count': src.get('size', meta['total_size']),
+            'city': src.get('city'),
+            'min_date': dates['min_date'],
+            'max_date': dates['max_date'],
+        }]
 
-        for entry in cluster_data:
-            entry['min_date'] = date_info['min_date']
-            entry['max_date'] = date_info['max_date']
+    clusters = {'Cluster': cluster_aggregation['Cluster']}
 
+    total_doc_count = sum(m['doc_count'] for m in cluster_meta.values())
 
-
-    total_doc_count = sum(bucket['doc_count'] for bucket in clusters['Cluster'].values())
-
-    return render_template('index.html', 
+    return render_template('index.html',
                         results=results['hits']['hits'],
                         query=query,
                         from_=from_,
@@ -356,8 +332,6 @@ def handle_search():
                         clusters_results=clusters_results,
                         cluster_aggregation=cluster_aggregation,
                         sorted_cluster=sorted_cluster,
-                        # cluster_totals=cluster_totals,
-                        # processed_clusters=processed_clusters, 
                         total_doc_count=total_doc_count)
 
 
