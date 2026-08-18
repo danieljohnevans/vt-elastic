@@ -97,10 +97,10 @@ def handle_search():
         search_query['bool']['must'].append({
             "query_string": {
                 "query": parsed_query if parsed_query else "*",
-                "default_field": "text",  
-                "default_operator": "AND",  
+                "default_field": "text",
+                "default_operator": "AND",
                 "analyze_wildcard": True,
-                
+                "lenient": True,
             }
         })
     else:
@@ -159,7 +159,7 @@ def handle_search():
                 'cluster-agg': {
                     'terms': {
                         'field': 'cluster',
-                        'size': 500,
+                        'size': 200,
                         'order': {'_count': 'desc'},
                     },
                     'aggs': {
@@ -619,7 +619,7 @@ def extract_filters(query):
     if 'year' in filters:
         parsed_query = re.sub(r"\s*year:\d{4}\s*", ' ', parsed_query)
     if 'cluster' in filters:
-        parsed_query = re.sub(r"'cluster:'(\d+)", ' ', parsed_query)
+        parsed_query = re.sub(r"cluster:'\d+'", ' ', parsed_query)
     if 'id' in filters:
         parsed_query = re.sub(r'id:"[^"]+"|id:\S+', '', parsed_query)
 
