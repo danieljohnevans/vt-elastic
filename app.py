@@ -406,12 +406,15 @@ def get_document(id):
 
     loc_manifest_url = None
 
-    if corpus.startswith(('ca', 'acdc')):  
+    if corpus.startswith(('ca', 'acdc')):
         try:
-            loc_manifest_url = loc_manifest_url_from_fields(
-                src.get('series'),  # e.g. "/lccn/sn83030212"
-                src.get('date'),    # e.g. "1842-01-06"
-                src.get('ed')       # e.g. "1"
+            # LOC's own manifest.json is Cloudflare-blocked; serve our own,
+            # built from the still-reachable ?fo=json item API.
+            loc_manifest_url = url_for(
+                'ca_manifest',
+                lccn=_lccn_from_series(src.get('series')),
+                date=src.get('date'),   # e.g. "1842-01-06"
+                ed=src.get('ed'),       # e.g. "1"
             )
         except Exception:
             loc_manifest_url = None
@@ -661,13 +664,107 @@ def loc_manifest_url_from_fields(series: str, date_str: str, ed: str) -> str:
     if not (series and date_str and ed):
         raise ValueError("Missing one of series/date/ed for LOC manifest")
 
-    # extract "sn83030212" from "/lccn/sn83030212"
+    lccn = _lccn_from_series(series)
+    return f"https://www.loc.gov/item/{lccn}/{date_str}/ed-{ed}/manifest.json"
+
+
+def _lccn_from_series(series: str) -> str:
+    """Extract "sn83030212" from a series value like "/lccn/sn83030212"."""
+    if not series:
+        raise ValueError("Missing series")
     parts = series.strip("/").split("/")
     if len(parts) < 2 or parts[0] != "lccn":
         raise ValueError(f"Unexpected series format: {series}")
-    lccn = parts[1]
+    return parts[1]
 
-    return f"https://www.loc.gov/item/{lccn}/{date_str}/ed-{ed}/manifest.json"
+
+# Browser-like UA; LOC's data API (?fo=json) tolerates this, its manifest.json
+# endpoints are now behind a Cloudflare bot challenge and cannot be proxied.
+_LOC_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+           "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+
+def build_loc_iiif_manifest(lccn: str, date_str: str, ed: str, self_url: str = None) -> dict:
+    """
+    Build a IIIF Presentation v3 manifest for a Chronicling America issue from
+    LOC's item data API (?fo=json), which is still reachable, instead of LOC's
+    manifest.json (now Cloudflare-challenged). Page images point at the
+    tile.loc.gov IIIF Image API. Canvas order matches page order so the existing
+    p1seq <-> canvasIndex mapping (effectiveIndex = p1seq - 1) still holds.
+    """
+    fo_url = f"https://www.loc.gov/item/{lccn}/{date_str}/ed-{ed}/?fo=json"
+    r = requests.get(fo_url, timeout=25, headers={"User-Agent": _LOC_UA})
+    r.raise_for_status()
+    data = r.json()
+
+    canvases = []
+    for res in data.get("resources", []):
+        for variants in res.get("files", []):
+            # Pick the variant that carries a IIIF Image API info.json + full dims.
+            img = next(
+                (v for v in variants
+                 if v.get("info") and v.get("width") and v.get("height")),
+                None,
+            )
+            if not img:
+                continue
+            service_base = img["info"].rsplit("/info.json", 1)[0]
+            w = int(img["width"])
+            h = int(img["height"])
+            canvas_id = f"{service_base}/canvas"
+            canvases.append({
+                "id": canvas_id,
+                "type": "Canvas",
+                "width": w,
+                "height": h,
+                "items": [{
+                    "id": f"{canvas_id}/page",
+                    "type": "AnnotationPage",
+                    "items": [{
+                        "id": f"{canvas_id}/page/anno",
+                        "type": "Annotation",
+                        "motivation": "painting",
+                        "target": canvas_id,
+                        "body": {
+                            "id": f"{service_base}/full/full/0/default.jpg",
+                            "type": "Image",
+                            "format": "image/jpeg",
+                            "width": w,
+                            "height": h,
+                            "service": [{
+                                "id": service_base,
+                                "type": "ImageService2",
+                                "profile": "http://iiif.io/api/image/2/level2.json",
+                            }],
+                        },
+                    }],
+                }],
+            })
+
+    if not canvases:
+        raise ValueError(f"No canvases built from {fo_url}")
+
+    return {
+        "@context": "http://iiif.io/api/presentation/3/context.json",
+        "id": self_url or fo_url,
+        "type": "Manifest",
+        "label": {"none": [f"{lccn} {date_str} ed-{ed}"]},
+        "items": canvases,
+    }
+
+
+@app.get("/ca-manifest/<lccn>/<date>/<ed>.json")
+def ca_manifest(lccn, date, ed):
+    """Serve a self-hosted IIIF manifest for a Chronicling America issue."""
+    try:
+        self_url = url_for("ca_manifest", lccn=lccn, date=date, ed=ed, _external=True)
+        manifest = build_loc_iiif_manifest(lccn, date, ed, self_url)
+        resp = make_response(jsonify(manifest))
+    except Exception as e:
+        resp = make_response(jsonify({"error": f"manifest build failed: {e}"}), 502)
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Content-Type"] = "application/json"
+    return resp
 
 
 def _loc_canvas_id_with_dims(series: str, date_str: str, ed: str, seq: int):
