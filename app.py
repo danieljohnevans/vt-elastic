@@ -10,6 +10,7 @@ import pathlib
 from jinja2 import Undefined
 from pprint import pprint
 from datetime import datetime
+import json
 
 
 app = Flask(__name__)
@@ -779,16 +780,42 @@ def build_loc_iiif_manifest(lccn: str, date_str: str, ed: str,
 
 @app.get("/ca-manifest/<lccn>/<date>/<ed>.json")
 def ca_manifest(lccn, date, ed):
-    """Serve a self-hosted IIIF manifest for a Chronicling America issue."""
-    try:
-        self_url = url_for("ca_manifest", lccn=lccn, date=date, ed=ed, _external=True)
-        proxy_base = f"{_external_base()}/loc-image"
-        manifest = build_loc_iiif_manifest(lccn, date, ed, self_url, proxy_base)
-        resp = make_response(jsonify(manifest))
-    except Exception as e:
-        resp = make_response(jsonify({"error": f"manifest build failed: {e}"}), 502)
-    resp.headers["Access-Control-Allow-Origin"] = "*"
+    """
+    Serve a self-hosted IIIF manifest for a Chronicling America issue.
+
+    The built manifest is disk-cached: LOC's ?fo=json can take tens of seconds
+    when throttled, so we build it once per issue and reuse it thereafter.
+    """
+    cache_file = _LOC_IMAGE_CACHE / (
+        hashlib.sha256(f"manifest:{lccn}:{date}:{ed}".encode("utf-8")).hexdigest()
+        + ".manifest.json"
+    )
+
+    manifest = None
+    if cache_file.exists():
+        try:
+            manifest = json.loads(cache_file.read_text())
+        except Exception:
+            manifest = None
+
+    if manifest is None:
+        try:
+            self_url = url_for("ca_manifest", lccn=lccn, date=date, ed=ed, _external=True)
+            proxy_base = f"{_external_base()}/loc-image"
+            manifest = build_loc_iiif_manifest(lccn, date, ed, self_url, proxy_base)
+            try:
+                cache_file.write_text(json.dumps(manifest))
+            except Exception:
+                pass
+        except Exception as e:
+            resp = make_response(jsonify({"error": f"manifest build failed: {e}"}), 502)
+            resp.headers["Access-Control-Allow-Origin"] = "*"
+            return resp
+
+    resp = make_response(jsonify(manifest))
     resp.headers["Content-Type"] = "application/json"
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Cache-Control"] = "public, max-age=86400"
     return resp
 
 
@@ -809,14 +836,28 @@ def loc_image(rest):
     # info.json: rewrite the image id back to this proxy so Mirador keeps
     # requesting tiles through us rather than tile.loc.gov.
     if rest.endswith("/info.json"):
-        try:
-            r = requests.get(upstream, timeout=25, headers=headers)
-            r.raise_for_status()
-            info = r.json()
-        except Exception as e:
-            resp = make_response(jsonify({"error": f"info fetch failed: {e}"}), 502)
-            resp.headers["Access-Control-Allow-Origin"] = "*"
-            return resp
+        info_cache = _LOC_IMAGE_CACHE / (
+            hashlib.sha256(rest.encode("utf-8")).hexdigest() + ".info.json"
+        )
+        info = None
+        if info_cache.exists():
+            try:
+                info = json.loads(info_cache.read_text())
+            except Exception:
+                info = None
+        if info is None:
+            try:
+                r = requests.get(upstream, timeout=25, headers=headers)
+                r.raise_for_status()
+                info = r.json()
+                try:
+                    info_cache.write_text(json.dumps(info))
+                except Exception:
+                    pass
+            except Exception as e:
+                resp = make_response(jsonify({"error": f"info fetch failed: {e}"}), 502)
+                resp.headers["Access-Control-Allow-Origin"] = "*"
+                return resp
         service_id = rest[:-len("/info.json")]
         proxy_id = f"{_external_base()}/loc-image/{service_id}"
         info["@id"] = proxy_id
