@@ -4,6 +4,9 @@ from flask import Flask, render_template, request, Response, redirect, url_for, 
 from search import Search
 import csv
 import io
+import os
+import hashlib
+import pathlib
 from jinja2 import Undefined
 from pprint import pprint
 from datetime import datetime
@@ -684,12 +687,27 @@ _LOC_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
            "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
 
-def build_loc_iiif_manifest(lccn: str, date_str: str, ed: str, self_url: str = None) -> dict:
+_LOC_TILE_PREFIX = "https://tile.loc.gov/image-services/iiif/"
+_LOC_IMAGE_CACHE = pathlib.Path(os.getenv("LOC_IMAGE_CACHE", "/tmp/loc-image-cache"))
+_LOC_IMAGE_CACHE.mkdir(parents=True, exist_ok=True)
+
+
+def _external_base() -> str:
+    """Public origin for this app (force https; the site is served over TLS)."""
+    base = request.host_url.rstrip("/")
+    if base.startswith("http://"):
+        base = "https://" + base[len("http://"):]
+    return base
+
+
+def build_loc_iiif_manifest(lccn: str, date_str: str, ed: str,
+                            self_url: str = None, proxy_base: str = None) -> dict:
     """
     Build a IIIF Presentation v3 manifest for a Chronicling America issue from
     LOC's item data API (?fo=json), which is still reachable, instead of LOC's
-    manifest.json (now Cloudflare-challenged). Page images point at the
-    tile.loc.gov IIIF Image API. Canvas order matches page order so the existing
+    manifest.json (now Cloudflare-challenged). Image services point at our own
+    /loc-image proxy (proxy_base) so browsers never hit tile.loc.gov directly
+    (which challenges them). Canvas order matches page order so the existing
     p1seq <-> canvasIndex mapping (effectiveIndex = p1seq - 1) still holds.
     """
     fo_url = f"https://www.loc.gov/item/{lccn}/{date_str}/ed-{ed}/?fo=json"
@@ -708,10 +726,16 @@ def build_loc_iiif_manifest(lccn: str, date_str: str, ed: str, self_url: str = N
             )
             if not img:
                 continue
-            service_base = img["info"].rsplit("/info.json", 1)[0]
+            info_url = img["info"]                          # .../iiif/{service_id}/info.json
+            tile_base = info_url.rsplit("/info.json", 1)[0]  # .../iiif/{service_id}
+            if proxy_base and info_url.startswith(_LOC_TILE_PREFIX):
+                service_id = info_url[len(_LOC_TILE_PREFIX):].rsplit("/info.json", 1)[0]
+                image_base = f"{proxy_base}/{service_id}"
+            else:
+                image_base = tile_base
             w = int(img["width"])
             h = int(img["height"])
-            canvas_id = f"{service_base}/canvas"
+            canvas_id = f"{tile_base}/canvas"
             canvases.append({
                 "id": canvas_id,
                 "type": "Canvas",
@@ -726,13 +750,13 @@ def build_loc_iiif_manifest(lccn: str, date_str: str, ed: str, self_url: str = N
                         "motivation": "painting",
                         "target": canvas_id,
                         "body": {
-                            "id": f"{service_base}/full/full/0/default.jpg",
+                            "id": f"{image_base}/full/full/0/default.jpg",
                             "type": "Image",
                             "format": "image/jpeg",
                             "width": w,
                             "height": h,
                             "service": [{
-                                "id": service_base,
+                                "id": image_base,
                                 "type": "ImageService2",
                                 "profile": "http://iiif.io/api/image/2/level2.json",
                             }],
@@ -758,12 +782,76 @@ def ca_manifest(lccn, date, ed):
     """Serve a self-hosted IIIF manifest for a Chronicling America issue."""
     try:
         self_url = url_for("ca_manifest", lccn=lccn, date=date, ed=ed, _external=True)
-        manifest = build_loc_iiif_manifest(lccn, date, ed, self_url)
+        proxy_base = f"{_external_base()}/loc-image"
+        manifest = build_loc_iiif_manifest(lccn, date, ed, self_url, proxy_base)
         resp = make_response(jsonify(manifest))
     except Exception as e:
         resp = make_response(jsonify({"error": f"manifest build failed: {e}"}), 502)
     resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["Content-Type"] = "application/json"
+    return resp
+
+
+@app.get("/loc-image/<path:rest>")
+def loc_image(rest):
+    """
+    Proxy the tile.loc.gov IIIF Image API through our own origin. LOC now
+    Cloudflare-challenges browser requests to tile.loc.gov, but server-side
+    fetches succeed, so we relay them. `rest` is either "{service_id}/info.json"
+    or a IIIF image request "{service_id}/{region}/{size}/{rot}/{quality}.ext".
+    """
+    if not rest.startswith("service:") or ".." in rest:
+        abort(404)
+
+    upstream = f"{_LOC_TILE_PREFIX}{rest}"
+    headers = {"User-Agent": _LOC_UA, "Referer": "https://www.loc.gov/"}
+
+    # info.json: rewrite the image id back to this proxy so Mirador keeps
+    # requesting tiles through us rather than tile.loc.gov.
+    if rest.endswith("/info.json"):
+        try:
+            r = requests.get(upstream, timeout=25, headers=headers)
+            r.raise_for_status()
+            info = r.json()
+        except Exception as e:
+            resp = make_response(jsonify({"error": f"info fetch failed: {e}"}), 502)
+            resp.headers["Access-Control-Allow-Origin"] = "*"
+            return resp
+        service_id = rest[:-len("/info.json")]
+        proxy_id = f"{_external_base()}/loc-image/{service_id}"
+        info["@id"] = proxy_id
+        info["id"] = proxy_id
+        resp = make_response(jsonify(info))
+        resp.headers["Content-Type"] = "application/json"
+        resp.headers["Access-Control-Allow-Origin"] = "*"
+        resp.headers["Cache-Control"] = "public, max-age=86400"
+        return resp
+
+    # Image bytes: serve from disk cache when present, else fetch + cache.
+    cache_key = hashlib.sha256(rest.encode("utf-8")).hexdigest()
+    data_file = _LOC_IMAGE_CACHE / cache_key
+    type_file = _LOC_IMAGE_CACHE / f"{cache_key}.type"
+    if data_file.exists():
+        data = data_file.read_bytes()
+        ctype = type_file.read_text() if type_file.exists() else "image/jpeg"
+    else:
+        try:
+            r = requests.get(upstream, timeout=30, headers=headers)
+            r.raise_for_status()
+        except Exception:
+            abort(502)
+        data = r.content
+        ctype = r.headers.get("Content-Type", "image/jpeg")
+        try:
+            data_file.write_bytes(data)
+            type_file.write_text(ctype)
+        except Exception:
+            pass
+
+    resp = make_response(data)
+    resp.headers["Content-Type"] = ctype
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Cache-Control"] = "public, max-age=604800, immutable"
     return resp
 
 
